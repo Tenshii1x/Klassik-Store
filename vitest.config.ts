@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: "happy-dom",
     globals: true,
-    include: ["tests/unit/**/*.test.{ts,tsx}"],
+    include: ["tests/unit/**/*.test.{ts,tsx}", "tests/edge-functions/**/*.test.{ts,tsx}"],
   },
   resolve: {
     alias: {
