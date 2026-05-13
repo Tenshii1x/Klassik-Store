@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Brand colors */
+  --color-black: #0a0a0a;
+  --color-black-soft: #141414;
+  --color-black-surface: #1a1a1a;
+
+  --color-gold-primary: #c9a86a;
+  --color-gold-bright: #e6c887;
+  --color-gold-deep: #8b7340;
+
+  --color-cream: #f5efe3;
+  --color-rose-gold: #d4a594;
+
+  /* Semantic UI colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --color-muted: #888888;
+
+  --color-border: rgba(201, 168, 106, 0.12);
+  --color-border-strong: rgba(201, 168, 106, 0.3);
+
+  /* Fonts - read CSS vars injected by next/font */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), Georgia, serif;
+  --font-display: var(--font-cinzel), Georgia, serif;
+
+  /* Letter spacing custom */
+  --tracking-eyebrow: 0.22em;
+  --tracking-wider: 0.18em;
+  --tracking-widest: 0.4em;
+
+  /* Shadows */
+  --shadow-gold-glow: 0 12px 30px rgba(201, 168, 106, 0.25);
+  --shadow-gold-glow-lg: 0 18px 40px rgba(201, 168, 106, 0.4);
+  --shadow-deep: 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    background-color: var(--color-black);
+    color: #ffffff;
+  }
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--color-gold-primary);
+  }
+  .heading-display {
+    font-family: var(--font-serif);
+    font-weight: 500;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-gold {
+    background-image: linear-gradient(135deg, var(--color-gold-bright) 0%, var(--color-gold-primary) 100%);
+  }
+  .bg-radial-gold {
+    background-image: radial-gradient(circle at 50% 40%, rgba(201, 168, 106, 0.4), transparent 60%);
+  }
 }
