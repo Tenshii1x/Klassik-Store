@@ -14,6 +14,7 @@ import {
   Truck,
   Settings,
   Download,
+  Megaphone,
 } from "lucide-react"
 
 interface NavItem {
@@ -57,6 +58,7 @@ const groups: NavGroup[] = [
     title: "Configuración",
     items: [
       { label: "Tienda", href: "/admin/configuracion", icon: Settings },
+      { label: "Banner", href: "/admin/configuracion/banner", icon: Megaphone },
       { label: "Importador Temu", href: "/admin/importador", icon: Download },
     ],
   },
