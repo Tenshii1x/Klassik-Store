@@ -8,6 +8,7 @@ import { useCart } from "@/components/cart/CartProvider"
 import { Markdown } from "@/lib/markdown"
 import { Plus, Minus } from "lucide-react"
 import { toast } from "sonner"
+import { WishlistButton } from "@/components/wishlist/WishlistButton"
 
 interface Variante {
   id: string
@@ -92,7 +93,10 @@ export function ProductoInfo({ p }: { p: Producto }) {
             <Badge tone="info">Pre-orden{fechaRango ? ` · llega entre ${fechaRango}` : ""}</Badge>
           )}
         </div>
-        <h1 className="font-serif text-4xl md:text-5xl text-white">{p.nombre}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="font-serif text-4xl md:text-5xl text-white">{p.nombre}</h1>
+          <WishlistButton productoId={p.id} className="!w-11 !h-11 flex-shrink-0" />
+        </div>
         {p.modelo && <p className="text-muted text-xs tracking-wider mt-2">Modelo {p.modelo}</p>}
       </div>
 

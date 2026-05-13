@@ -3,6 +3,7 @@ import Image from "next/image"
 import { formatUSD } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight } from "lucide-react"
+import { WishlistButton } from "@/components/wishlist/WishlistButton"
 
 interface ProductoCardData {
   id: string
@@ -60,6 +61,7 @@ export function ProductoCard({ p }: { p: ProductoCardData }) {
             <Badge tone="info">Pre-orden</Badge>
           )}
         </div>
+        <WishlistButton productoId={p.id} className="absolute top-3 right-3 z-10" />
       </div>
       <div className="p-5 space-y-2">
         <h3 className="font-serif text-xl text-white leading-tight">{p.nombre}</h3>
