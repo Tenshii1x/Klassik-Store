@@ -15,6 +15,7 @@ import {
   Settings,
   Download,
   Megaphone,
+  Puzzle,
 } from "lucide-react"
 
 interface NavItem {
@@ -59,6 +60,7 @@ const groups: NavGroup[] = [
     items: [
       { label: "Tienda", href: "/admin/configuracion", icon: Settings },
       { label: "Banner", href: "/admin/configuracion/banner", icon: Megaphone },
+      { label: "Extensión Chrome", href: "/admin/configuracion/extension", icon: Puzzle },
       { label: "Importador Temu", href: "/admin/importador", icon: Download },
     ],
   },
