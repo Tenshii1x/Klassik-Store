@@ -25,11 +25,16 @@ function getGoodsId(): string | null {
   return null
 }
 
-function getTitle(): string {
-  // Prefer og:title (Temu sets this correctly)
-  const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute("content")
-  if (ogTitle && ogTitle.length > 5) return ogTitle.trim()
+function cleanTitle(t: string): string {
+  // Strip common Temu suffixes like "- Temu Panama", "| Temu", "- Temu USA"
+  return t
+    .replace(/[\s\-—|·]+temu[\s\w]*$/i, "")
+    .replace(/[\s\-—|·]+(panama|usa|mexico|colombia)\s*$/i, "")
+    .trim()
+}
 
+function getTitle(): string {
+  // Try DOM first since og:title often has the SEO-bloated version with " - Temu Panama"
   const selectors = [
     'h1[data-id]',
     '[data-pl="goods-title"]',
@@ -42,9 +47,14 @@ function getTitle(): string {
     const el = document.querySelector(sel)
     if (!el) continue
     const text = el.textContent
-    if (text && text.trim().length > 3) return text.trim()
+    if (text && text.trim().length > 3) return cleanTitle(text.trim())
   }
-  return document.title.split("|")[0].trim() || "Producto sin nombre"
+
+  // Fall back to og:title (clean the Temu suffix)
+  const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute("content")
+  if (ogTitle && ogTitle.length > 5) return cleanTitle(ogTitle.trim())
+
+  return cleanTitle(document.title.split("|")[0].trim()) || "Producto sin nombre"
 }
 
 /**
@@ -83,24 +93,18 @@ function looksLikeProductImage(src: string, el: HTMLImageElement | null): boolea
 
 function getImages(): { url: string; tipo: "imagen" | "video" }[] {
   const seen = new Set<string>()
-  const result: { url: string; tipo: "imagen" | "video" }[] = []
+  const galleryImages: string[] = []
+  const otherImages: string[] = []
 
-  // 1. og:image is usually the main product image
-  const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute("content")
-  if (ogImage) {
-    const url = normalizeImageUrl(ogImage)
-    seen.add(url)
-    result.push({ url, tipo: "imagen" })
-  }
-
-  // 2. Try to find the main product gallery container
-  // Temu typically uses divs with "gallery", "carousel", or "swiper" in class names
+  // 1. Try to find the main product gallery container FIRST (don't trust og:image)
   const gallerySelectors = [
     '[class*="Gallery"]',
     '[class*="MainPicture"]',
     '[class*="ProductMedia"]',
     '[class*="Swiper"]',
     '[class*="Carousel"]',
+    '[class*="ImageList"]',
+    '[class*="Thumbnail"]',
     '[role="region"][aria-label*="galer" i]',
   ]
   const galleryRoots: Element[] = []
@@ -108,28 +112,51 @@ function getImages(): { url: string; tipo: "imagen" | "video" }[] {
     document.querySelectorAll(sel).forEach((el) => galleryRoots.push(el))
   }
 
-  // 3. Within gallery roots, collect images
-  const searchScopes: ParentNode[] = galleryRoots.length > 0 ? galleryRoots : [document]
-  for (const scope of searchScopes) {
+  // 2. Collect gallery images
+  for (const scope of galleryRoots) {
     scope.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
       const src = img.src || img.dataset.src || ""
       if (!looksLikeProductImage(src, img)) return
       const url = normalizeImageUrl(src)
       if (seen.has(url)) return
       seen.add(url)
-      result.push({ url, tipo: "imagen" })
+      galleryImages.push(url)
     })
   }
 
-  // 4. Videos (anywhere in page; usually only product has video)
+  // 3. Fallback: if no gallery found, collect ANY product-looking images
+  if (galleryImages.length === 0) {
+    document.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
+      const src = img.src || img.dataset.src || ""
+      if (!looksLikeProductImage(src, img)) return
+      const url = normalizeImageUrl(src)
+      if (seen.has(url)) return
+      seen.add(url)
+      otherImages.push(url)
+    })
+  }
+
+  // 4. og:image as LAST resort, not first (it's often the social-share generic image)
+  const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute("content")
+  if (ogImage && galleryImages.length === 0 && otherImages.length === 0) {
+    const url = normalizeImageUrl(ogImage)
+    seen.add(url)
+    otherImages.push(url)
+  }
+
+  const result: { url: string; tipo: "imagen" | "video" }[] = [
+    ...galleryImages.map((url) => ({ url, tipo: "imagen" as const })),
+    ...otherImages.map((url) => ({ url, tipo: "imagen" as const })),
+  ]
+
+  // 5. Videos (anywhere in page)
   document.querySelectorAll<HTMLVideoElement>("video").forEach((video) => {
     let src = video.getAttribute("src") || ""
     if (!src) {
       const source = video.querySelector("source")
       src = source?.getAttribute("src") || ""
     }
-    if (!src) return
-    if (seen.has(src)) return
+    if (!src || seen.has(src)) return
     seen.add(src)
     result.push({ url: src, tipo: "video" })
   })
@@ -142,7 +169,8 @@ function parseMoney(text: string | null | undefined): number | null {
   // Strip everything except digits, dot, comma
   const cleaned = text.replace(/[^\d.,]/g, "").replace(/,/g, "")
   const n = parseFloat(cleaned)
-  if (isNaN(n) || n <= 0 || n > 100000) return null
+  // Filter out: invalid, zero, tiny prices (likely shipping/tax/insurance), absurd
+  if (isNaN(n) || n < 1 || n > 100000) return null
   return n
 }
 

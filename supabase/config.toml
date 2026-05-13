@@ -1,0 +1,7 @@
+# Klassik Store · Supabase config
+# Only declares per-function settings. Project-wide settings stay in the dashboard.
+
+[functions.import-temu-product]
+# Our function uses its own API key auth (extension_api_keys table), not Supabase JWTs.
+# Without this, the gateway rejects with UNAUTHORIZED_INVALID_JWT_FORMAT.
+verify_jwt = false
