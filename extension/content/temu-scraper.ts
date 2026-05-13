@@ -1,15 +1,8 @@
 import type { ScrapedProduct } from "../lib/types"
 
 /**
- * Temu DOM scraper — pragmatic strategy.
- *
- * Strategies in order of reliability:
- *  1. Inline JSON (Next.js __NEXT_DATA__ or similar) — most reliable when available
- *  2. URL query param `top_gallery_url` — guaranteed main product image
- *  3. JSON-LD structured data — for price
- *  4. DOM image scan filtered to /product/open/ and /product/fancy/ paths,
- *     deduplicated by hash, excluding the cart/sidebar by container heuristics
- *  5. Title from h1, shortened automatically
+ * Temu DOM scraper — targets the thumbnail strip specifically to get
+ * different product images (not duplicates of the main image).
  */
 
 interface WindowWithTemuData extends Window {
@@ -29,45 +22,59 @@ function getGoodsId(): string | null {
   return null
 }
 
-/**
- * Shorten a long Temu SEO title to something more usable.
- * Removes duplicate words, caps at 5 words / 50 chars, title-cases.
- * Example: "Casio Reloj Casio Retro Pequeño Cuadrado Plateado Reloj de Agua para..."
- *       → "Reloj Casio Retro"
- */
-function shortenTitle(t: string): string {
+// ============================================================
+// TITLE
+// ============================================================
+
+const STOP_TAIL = /[\s,.;:|—\-]+(de|del|con|para|y|en|a|al|por|sin|o)\s*$/i
+
+function smartShortenTitle(t: string): string {
   if (!t) return ""
-  // Lower-case + split into words, filter empties
   let clean = t
     .replace(/[\s\-—|·]+temu[\s\w]*$/i, "")
     .replace(/[\s\-—|·]+(panama|usa|mexico|colombia)\s*$/i, "")
     .trim()
 
-  const words = clean.split(/\s+/).filter((w) => w.length > 0)
+  // Cut at first comma/period/parenthesis if there's content before
+  const breakMatch = clean.match(/^([^,.()\[\]]+)/)
+  if (breakMatch && breakMatch[1].trim().length >= 8) {
+    clean = breakMatch[1].trim()
+  }
+
+  // Cap at 45 chars at a word boundary
+  if (clean.length > 45) {
+    const truncated = clean.slice(0, 45)
+    const lastSpace = truncated.lastIndexOf(" ")
+    clean = lastSpace > 15 ? truncated.slice(0, lastSpace) : truncated
+  }
+
+  // Remove trailing connector words ("de", "con", "para", etc.) repeatedly
+  for (let i = 0; i < 3; i++) {
+    const next = clean.replace(STOP_TAIL, "").trim()
+    if (next === clean) break
+    clean = next
+  }
+
+  // Remove consecutive duplicate words (e.g. "Casio Reloj Casio")
+  const words = clean.split(/\s+/)
+  const dedup: string[] = []
   const seen = new Set<string>()
-  const unique: string[] = []
   for (const w of words) {
     const key = w.toLowerCase().replace(/[^\wáéíóúñü]/gi, "")
     if (!key) continue
     if (seen.has(key)) continue
     seen.add(key)
-    unique.push(w)
-    if (unique.length >= 5) break
+    dedup.push(w)
   }
-  let result = unique.join(" ")
-  if (result.length > 50) result = result.slice(0, 50).trim()
+  clean = dedup.join(" ")
 
-  // Title case (each word capitalized)
-  result = result
+  // Title case
+  clean = clean
     .split(" ")
-    .map((w) => {
-      // Don't capitalize tiny stopwords unless they're the first word
-      const lower = w.toLowerCase()
-      return lower.charAt(0).toUpperCase() + lower.slice(1)
-    })
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ")
 
-  return result || t.slice(0, 50)
+  return clean || t.slice(0, 45)
 }
 
 function getFullTitle(): string {
@@ -90,86 +97,128 @@ function getFullTitle(): string {
   return document.title.split("|")[0].trim() || "Producto sin nombre"
 }
 
+// ============================================================
+// IMAGES — target thumbnail strip
+// ============================================================
+
 function normalizeImageUrl(src: string): string {
   return src
     .replace(/_\d+x\d+(?=\.[a-z]+(\?|!|$))/i, "")
     .replace(/!\w+=\d+/g, "")
-    .split("?")[0] // strip query strings to dedupe ?cf=fa-default variants
+    .split("?")[0]
+}
+
+function extractImageHash(url: string): string | null {
+  const m = url.match(/\/product\/(?:open|fancy)\/([a-f0-9]{16,})/i)
+  return m ? m[1] : null
+}
+
+function isProductCdnImage(src: string): boolean {
+  return /\/product\/(open|fancy)\//i.test(src)
 }
 
 /**
- * Extract Temu product image hash. Each unique product image has a unique hash.
- * Example: "/product/open/5908a7f466e944af94042d53f8b1a3c6-goods.jpeg"
- *       → "5908a7f466e944af94042d53f8b1a3c6"
+ * Find the largest group of small product images that share a common ancestor.
+ * Temu's thumbnail strip is typically 5-10 small images in a vertical column,
+ * all wrapped in a common parent.
  */
-function extractImageHash(url: string): string | null {
-  const m = url.match(/\/product\/(?:open|fancy)\/([a-f0-9]{16,})/i)
-  if (m) return m[1]
-  return null
+function findThumbnailGroup(): HTMLImageElement[] {
+  const allProductImgs = Array.from(document.querySelectorAll<HTMLImageElement>("img"))
+    .filter((img) => {
+      const src = img.src || img.dataset.src || ""
+      return isProductCdnImage(src)
+    })
+
+  if (allProductImgs.length === 0) return []
+
+  // Group by ancestor 3 levels up (skip wrapper divs)
+  const groups = new Map<Element, HTMLImageElement[]>()
+  for (const img of allProductImgs) {
+    let anc: Element | null = img
+    for (let i = 0; i < 4 && anc?.parentElement; i++) {
+      anc = anc.parentElement
+    }
+    if (!anc) continue
+    if (!groups.has(anc)) groups.set(anc, [])
+    groups.get(anc)!.push(img)
+  }
+
+  let best: HTMLImageElement[] = []
+  for (const group of groups.values()) {
+    if (group.length > best.length) best = group
+  }
+  return best
 }
 
 function getImages(): { url: string; tipo: "imagen" | "video" }[] {
   const seenUrls = new Set<string>()
   const seenHashes = new Set<string>()
-  const result: { url: string; tipo: "imagen" | "video" }[] = []
+  const images: { url: string; tipo: "imagen" | "video" }[] = []
+  const videos: { url: string; tipo: "imagen" | "video" }[] = []
 
-  function tryAdd(rawUrl: string, tipo: "imagen" | "video" = "imagen"): boolean {
+  function tryAddImage(rawUrl: string): boolean {
     if (!rawUrl) return false
     const url = normalizeImageUrl(rawUrl)
     if (seenUrls.has(url)) return false
-    if (tipo === "imagen") {
-      const hash = extractImageHash(url)
-      if (hash && seenHashes.has(hash)) return false
-      if (hash) seenHashes.add(hash)
-    }
+    const hash = extractImageHash(url)
+    if (hash && seenHashes.has(hash)) return false
+    if (hash) seenHashes.add(hash)
     seenUrls.add(url)
-    result.push({ url, tipo })
+    images.push({ url, tipo: "imagen" })
     return true
   }
 
-  // 1. Main image from URL param (guaranteed product image)
+  // 1. Main image from URL param (highest confidence)
   const urlParam = new URL(location.href).searchParams.get("top_gallery_url")
-  if (urlParam) tryAdd(urlParam, "imagen")
+  if (urlParam) tryAddImage(urlParam)
 
-  // 2. Scan page for all Temu product images, dedupe by hash
-  // (skip ones that have NO hash — those are usually UI chrome)
-  document.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
+  // 2. Thumbnail strip — biggest group of product images with common ancestor
+  const thumbs = findThumbnailGroup()
+  for (const img of thumbs) {
     const src = img.src || img.dataset.src || ""
-    if (!src) return
-    const hash = extractImageHash(src)
-    if (!hash) return
-    tryAdd(src, "imagen")
-  })
-
-  // 3. Videos: only those inside likely product containers
-  const videoScope = ["[class*=MainPicture]", "[class*=ProductMedia]", "[class*=Gallery]"]
-  for (const sel of videoScope) {
-    document.querySelectorAll(sel).forEach((scope) => {
-      scope.querySelectorAll<HTMLVideoElement>("video").forEach((video) => {
-        let src = video.getAttribute("src") || ""
-        if (!src) src = video.querySelector("source")?.getAttribute("src") || ""
-        if (src) tryAdd(src, "video")
-      })
-    })
+    tryAddImage(src)
   }
 
-  return result.slice(0, 20)
+  // 3. Videos: look for <video> tags first, then try inline JSON
+  document.querySelectorAll<HTMLVideoElement>("video").forEach((video) => {
+    let src = video.getAttribute("src") || ""
+    if (!src) src = video.querySelector("source")?.getAttribute("src") || ""
+    if (!src || seenUrls.has(src)) return
+    seenUrls.add(src)
+    videos.push({ url: src, tipo: "video" })
+  })
+
+  // 3b. Search inline scripts for video URLs (mp4 patterns on kwcdn)
+  if (videos.length === 0) {
+    const scripts = document.querySelectorAll("script")
+    for (const s of scripts) {
+      const text = s.textContent || ""
+      if (!text.includes(".mp4")) continue
+      // Match Temu CDN mp4 URLs
+      const matches = text.match(/https?:\\?\/\\?\/[^"'\s]+\.mp4[^"'\s]*/g) || []
+      for (const m of matches) {
+        const url = m.replace(/\\\//g, "/").replace(/[",'\\\s]+$/, "")
+        if (seenUrls.has(url)) continue
+        seenUrls.add(url)
+        videos.push({ url, tipo: "video" })
+        if (videos.length >= 1) break
+      }
+      if (videos.length >= 1) break
+    }
+  }
+
+  // Combine: videos first (so they show as preview), then images
+  const result = [...videos, ...images]
+  return result.slice(0, 10)
 }
 
-function getDescription(): string | null {
-  const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute("content")
-  if (ogDesc && ogDesc.length > 10) return ogDesc.trim().slice(0, 5000)
-  return null
-}
+// ============================================================
+// PRICE — JSON-LD only
+// ============================================================
 
-/**
- * Try to extract product price from JSON-LD structured data.
- * Falls back to null if not confidently found.
- */
 function getPrice(): { actual: number | null; anterior: number | null } {
   const nums: number[] = []
 
-  // 1. JSON-LD Product/Offer schema
   document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]').forEach((s) => {
     try {
       const data = JSON.parse(s.textContent || "{}")
@@ -194,7 +243,6 @@ function getPrice(): { actual: number | null; anterior: number | null } {
     } catch {}
   })
 
-  // 2. og:price:amount
   const ogPrice = document.querySelector('meta[property="og:price:amount"]')?.getAttribute("content")
   if (ogPrice) {
     const n = parseFloat(ogPrice)
@@ -207,6 +255,30 @@ function getPrice(): { actual: number | null; anterior: number | null } {
   return { actual: unique[0], anterior: unique[unique.length - 1] }
 }
 
+// ============================================================
+// DESCRIPTION
+// ============================================================
+
+function getDescription(): string | null {
+  const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute("content")
+  if (ogDesc && ogDesc.length > 10) {
+    // Remove Temu marketing prefix/suffix and limit length
+    let d = ogDesc.trim()
+    d = d.replace(/[Tt]emu[\s\S]*$/, "").trim()
+    if (d.length > 800) {
+      const cutoff = d.slice(0, 800)
+      const lastPeriod = cutoff.lastIndexOf(".")
+      d = lastPeriod > 200 ? cutoff.slice(0, lastPeriod + 1) : cutoff + "..."
+    }
+    return d
+  }
+  return null
+}
+
+// ============================================================
+// SCRAPE
+// ============================================================
+
 export function scrape(): ScrapedProduct | null {
   const goods_id = getGoodsId()
   if (!goods_id) return null
@@ -216,7 +288,7 @@ export function scrape(): ScrapedProduct | null {
   return {
     temu_url: cleanUrl,
     temu_goods_id: goods_id,
-    nombre_temu: shortenTitle(fullTitle),
+    nombre_temu: smartShortenTitle(fullTitle),
     descripcion: getDescription(),
     precio: actual,
     precio_anterior: anterior,
