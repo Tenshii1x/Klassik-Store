@@ -35,7 +35,13 @@ interface Props {
 
 export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Props) {
   const [isPending, startTransition] = useTransition()
-  const [form, setForm] = useState<ProductoInput>({
+  type FormState = Omit<ProductoInput, "costo_temu" | "costo_envio_unitario" | "precio_venta"> & {
+    costo_temu: number | null
+    costo_envio_unitario: number | null
+    precio_venta: number | null
+  }
+
+  const [form, setForm] = useState<FormState>({
     nombre: initial?.nombre || "",
     nombre_temu: initial?.nombre_temu || null,
     descripcion: initial?.descripcion || null,
@@ -45,9 +51,9 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
     subseccion_id: initial?.subseccion_id || null,
     modo: initial?.modo || "preorden",
     stock_unidades: initial?.stock_unidades ?? null,
-    costo_temu: initial?.costo_temu ?? 0,
-    costo_envio_unitario: initial?.costo_envio_unitario ?? 0,
-    precio_venta: initial?.precio_venta ?? 0,
+    costo_temu: initial?.costo_temu ?? null,
+    costo_envio_unitario: initial?.costo_envio_unitario ?? null,
+    precio_venta: initial?.precio_venta ?? null,
     precio_anterior: initial?.precio_anterior ?? null,
     margen_override_porcentaje: initial?.margen_override_porcentaje ?? null,
     temu_url: initial?.temu_url || null,
@@ -62,21 +68,27 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
     solo_para_el: initial?.solo_para_el ?? false,
   })
 
-  function set<K extends keyof ProductoInput>(k: K, v: ProductoInput[K]) {
+  function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((p) => ({ ...p, [k]: v }))
   }
 
   const margenEfectivo = form.margen_override_porcentaje ?? margenGlobal
-  const precioCalculado = calcularPrecioVenta(form.costo_temu, form.costo_envio_unitario, margenEfectivo)
-  const margenReal = calcularMargenReal(form.precio_venta, form.costo_temu, form.costo_envio_unitario)
-  const gananciaNeta = calcularGananciaNeta(form.precio_venta, form.costo_temu, form.costo_envio_unitario)
+  const precioCalculado = calcularPrecioVenta(form.costo_temu ?? 0, form.costo_envio_unitario ?? 0, margenEfectivo)
+  const margenReal = calcularMargenReal(form.precio_venta ?? 0, form.costo_temu ?? 0, form.costo_envio_unitario ?? 0)
+  const gananciaNeta = calcularGananciaNeta(form.precio_venta ?? 0, form.costo_temu ?? 0, form.costo_envio_unitario ?? 0)
 
   const seccionSeleccionada = secciones.find((s) => s.id === form.seccion_id)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     startTransition(async () => {
-      const result = initial?.id ? await updateProducto(initial.id, form) : await createProducto(form)
+      const payload: ProductoInput = {
+        ...form,
+        costo_temu: form.costo_temu ?? 0,
+        costo_envio_unitario: form.costo_envio_unitario ?? 0,
+        precio_venta: form.precio_venta ?? 0,
+      }
+      const result = initial?.id ? await updateProducto(initial.id, payload) : await createProducto(payload)
       if (result?.error) {
         toast.error(result.error)
         return
@@ -312,7 +324,7 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
               <NumberInput
                 min={0}
                 value={form.costo_temu}
-                onChange={(v) => set("costo_temu", v ?? 0)}
+                onChange={(v) => set("costo_temu", v)}
               />
             </div>
             <div>
@@ -320,7 +332,7 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
               <NumberInput
                 min={0}
                 value={form.costo_envio_unitario}
-                onChange={(v) => set("costo_envio_unitario", v ?? 0)}
+                onChange={(v) => set("costo_envio_unitario", v)}
               />
             </div>
             <div>
@@ -342,7 +354,7 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
                 <NumberInput
                   min={0}
                   value={form.precio_venta}
-                  onChange={(v) => set("precio_venta", v ?? 0)}
+                  onChange={(v) => set("precio_venta", v)}
                   required
                 />
                 <Button

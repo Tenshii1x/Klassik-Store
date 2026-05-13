@@ -27,12 +27,12 @@ export function ProductoVariantes({ productoId, initial }: Props) {
   const [draft, setDraft] = useState<{
     tipo: string
     valor: string
-    precio_extra: number
+    precio_extra: number | null
     stock_unidades: number | null
   }>({
     tipo: "Color",
     valor: "",
-    precio_extra: 0,
+    precio_extra: null,
     stock_unidades: null,
   })
 
@@ -45,7 +45,7 @@ export function ProductoVariantes({ productoId, initial }: Props) {
       const result = await addVariante(productoId, {
         tipo: draft.tipo,
         valor: draft.valor,
-        precio_extra: draft.precio_extra || 0,
+        precio_extra: draft.precio_extra ?? 0,
         stock_unidades: draft.stock_unidades,
         orden: initial.length,
       })
@@ -54,7 +54,7 @@ export function ProductoVariantes({ productoId, initial }: Props) {
         return
       }
       toast.success("Variante agregada")
-      setDraft({ tipo: "Color", valor: "", precio_extra: 0, stock_unidades: null })
+      setDraft({ tipo: "Color", valor: "", precio_extra: null, stock_unidades: null })
     })
   }
 
@@ -115,7 +115,7 @@ export function ProductoVariantes({ productoId, initial }: Props) {
           <NumberInput
             min={0}
             value={draft.precio_extra}
-            onChange={(v) => setDraft({ ...draft, precio_extra: v ?? 0 })}
+            onChange={(v) => setDraft({ ...draft, precio_extra: v })}
           />
         </div>
         <div className="col-span-2">

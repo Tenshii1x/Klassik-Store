@@ -63,6 +63,12 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       }
     }
 
+    function handleFocus(e: React.FocusEvent<HTMLInputElement>) {
+      // Select all on focus so typing replaces the existing value (especially
+      // the default "0" that's tedious to delete manually)
+      e.target.select()
+    }
+
     return (
       <Input
         ref={ref}
@@ -72,6 +78,7 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         value={text}
         onChange={handleChange}
         onBlur={handleBlur}
+        onFocus={handleFocus}
         placeholder={placeholder}
         required={required}
         className={className}

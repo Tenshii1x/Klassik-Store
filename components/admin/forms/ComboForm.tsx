@@ -26,16 +26,19 @@ interface Props {
 
 export function ComboForm({ initial, productosDisponibles }: Props) {
   const [isPending, startTransition] = useTransition()
-  const [form, setForm] = useState<ComboInput>({
+
+  type FormState = Omit<ComboInput, "precio_combo"> & { precio_combo: number | null }
+
+  const [form, setForm] = useState<FormState>({
     nombre: initial?.nombre || "",
     descripcion: initial?.descripcion || null,
-    precio_combo: initial?.precio_combo ?? 0,
+    precio_combo: initial?.precio_combo ?? null,
     imagen_url: initial?.imagen_url || null,
     activo: initial?.activo ?? true,
     productos: initial?.productos || [],
   })
 
-  function set<K extends keyof ComboInput>(k: K, v: ComboInput[K]) {
+  function set<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((p) => ({ ...p, [k]: v }))
   }
 
@@ -59,12 +62,13 @@ export function ComboForm({ initial, productosDisponibles }: Props) {
     const prod = productosDisponibles.find((d) => d.id === p.producto_id)
     return acc + (prod?.precio_venta || 0) * p.cantidad
   }, 0)
-  const ahorro = totalSinDescuento - form.precio_combo
+  const ahorro = totalSinDescuento - (form.precio_combo ?? 0)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     startTransition(async () => {
-      const result = initial?.id ? await updateCombo(initial.id, form) : await createCombo(form)
+      const payload: ComboInput = { ...form, precio_combo: form.precio_combo ?? 0 }
+      const result = initial?.id ? await updateCombo(initial.id, payload) : await createCombo(payload)
       if (result?.error) {
         toast.error(result.error)
         return
@@ -180,7 +184,7 @@ export function ComboForm({ initial, productosDisponibles }: Props) {
             <NumberInput
               min={0}
               value={form.precio_combo}
-              onChange={(v) => set("precio_combo", v ?? 0)}
+              onChange={(v) => set("precio_combo", v)}
               required
             />
           </div>
