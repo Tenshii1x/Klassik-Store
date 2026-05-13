@@ -1,9 +1,27 @@
 import Link from "next/link"
 import { Logo } from "@/components/brand/logo"
 import { getConfiguracion } from "@/lib/catalog/queries"
-// NOTE: `Instagram` icon was removed from lucide-react in v1.x (trademark reasons).
-// Using `Camera` as a substitute glyph for the Instagram link. Replace with custom SVG if exact brand mark is needed.
-import { Camera as Instagram, MessageCircle } from "lucide-react"
+import { MessageCircle } from "lucide-react"
+
+function InstagramIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+    </svg>
+  )
+}
 
 export async function Footer() {
   const config = await getConfiguracion()
@@ -17,7 +35,7 @@ export async function Footer() {
           <div className="flex gap-3">
             {config?.instagram_url && (
               <a href={config.instagram_url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full border border-gold-primary/40 flex items-center justify-center text-gold-primary hover:bg-gold-primary hover:text-black transition-colors">
-                <Instagram size={16} />
+                <InstagramIcon size={16} />
               </a>
             )}
             {config?.whatsapp && (
