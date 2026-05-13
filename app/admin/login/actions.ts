@@ -15,10 +15,7 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    // DEBUG temporal: exponer mensaje real de Supabase para diagnosticar.
-    // Revertir a "Credenciales incorrectas" después de resolver.
-    console.error("[login] Supabase auth error:", error)
-    return { error: `[DEBUG] ${error.message} (status: ${error.status ?? "n/a"})` }
+    return { error: "Credenciales incorrectas" }
   }
 
   redirect("/admin")
