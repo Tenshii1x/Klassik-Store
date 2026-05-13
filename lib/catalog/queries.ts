@@ -90,6 +90,20 @@ export async function getProductosRelacionados(productoId: string, seccionId: st
   return data || []
 }
 
+export async function getTodosProductos(limit = 100) {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("productos")
+    .select(
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, watermark_limpio)"
+    )
+    .eq("estado", "publicado")
+    .order("destacado", { ascending: false })
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(limit)
+  return data || []
+}
+
 export async function getProductosDestacados(limit = 8) {
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase
