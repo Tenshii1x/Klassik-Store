@@ -82,9 +82,11 @@ async function run() {
       ${firstImg ? `<img src="${escapeHtml(firstImg)}" alt="">` : ""}
       <h3>${escapeHtml(p.nombre_temu.slice(0, 120))}</h3>
       <div class="meta">
-        ${p.imagenes.length} imagen(es) · ${p.variantes.length} variante(s)
+        ${p.imagenes.length} imagen(es) detectada(s) del producto
       </div>
-      <div class="price">${p.precio ? `$${p.precio.toFixed(2)}` : "Sin precio detectado"}</div>
+      <div class="config-help" style="margin:0;font-size:11px;">
+        <strong>Llenas en el admin:</strong> precio, sección, descripción evocativa, variantes (color/talla), márcas imágenes limpias antes de publicar.
+      </div>
       <button class="primary" id="import">Importar a Klassik Store</button>
       <div id="status"></div>
     </div>
