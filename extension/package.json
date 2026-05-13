@@ -1,0 +1,15 @@
+{
+  "name": "klassik-store-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension to import Temu products into Klassik Store admin",
+  "private": true,
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.270",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.0"
+  }
+}
