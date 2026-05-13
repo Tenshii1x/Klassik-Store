@@ -241,12 +241,13 @@ git commit -m "chore: scaffold Next.js app with TypeScript and Tailwind"
 
 ---
 
-## Task 2: Configurar Tailwind con tokens de marca
+## Task 2: Configurar Tailwind v4 con tokens de marca
+
+**Nota:** El scaffold instaló **Tailwind v4** (no v3). En v4 NO hay `tailwind.config.ts` — todos los tokens van en `globals.css` con `@theme`. El plan se ajustó a esta realidad.
 
 **Files:**
-- Modify: `tailwind.config.ts`
-- Modify: `app/globals.css`
-- Modify: `app/layout.tsx` (cargar fuentes)
+- Modify: `app/globals.css` (definir tokens vía `@theme`)
+- Modify: `app/layout.tsx` (cargar fuentes Google y exponer CSS vars)
 - Create: `lib/utils.ts`
 
 - [ ] **Step 2.1: Instalar dependencias de UI**
@@ -273,93 +274,94 @@ export function formatUSD(amount: number): string {
 }
 ```
 
-- [ ] **Step 2.3: Reemplazar `tailwind.config.ts` con tokens de marca**
+- [ ] **Step 2.3: Reemplazar `app/globals.css` con tokens de marca (Tailwind v4)**
 
-```ts
-import type { Config } from "tailwindcss"
-
-const config: Config = {
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
-  theme: {
-    extend: {
-      colors: {
-        // brand
-        black: {
-          DEFAULT: "#0a0a0a",
-          soft: "#141414",
-          surface: "#1a1a1a",
-        },
-        gold: {
-          primary: "#c9a86a",
-          bright: "#e6c887",
-          deep: "#8b7340",
-        },
-        cream: "#f5efe3",
-        "rose-gold": "#d4a594",
-        // ui semantic
-        success: "#10b981",
-        warning: "#f59e0b",
-        danger: "#ef4444",
-        info: "#3b82f6",
-        muted: "#888888",
-        border: "rgba(201, 168, 106, 0.12)",
-        "border-strong": "rgba(201, 168, 106, 0.3)",
-      },
-      fontFamily: {
-        serif: ["var(--font-cormorant)", "Georgia", "serif"],
-        display: ["var(--font-cinzel)", "Georgia", "serif"],
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-      },
-      letterSpacing: {
-        eyebrow: "0.22em",
-        wider: "0.18em",
-        widest: "0.4em",
-      },
-      boxShadow: {
-        "gold-glow": "0 12px 30px rgba(201, 168, 106, 0.25)",
-        "gold-glow-lg": "0 18px 40px rgba(201, 168, 106, 0.4)",
-        "deep": "0 30px 80px rgba(0, 0, 0, 0.6)",
-      },
-      backgroundImage: {
-        "gradient-gold": "linear-gradient(135deg, #e6c887 0%, #c9a86a 100%)",
-        "radial-gold": "radial-gradient(circle at 50% 40%, rgba(201,168,106,0.4), transparent 60%)",
-      },
-    },
-  },
-  plugins: [],
-}
-
-export default config
-```
-
-- [ ] **Step 2.4: Reemplazar `app/globals.css`**
+Sobrescribir completamente `app/globals.css` con:
 
 ```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  /* Brand colors */
+  --color-black: #0a0a0a;
+  --color-black-soft: #141414;
+  --color-black-surface: #1a1a1a;
+
+  --color-gold-primary: #c9a86a;
+  --color-gold-bright: #e6c887;
+  --color-gold-deep: #8b7340;
+
+  --color-cream: #f5efe3;
+  --color-rose-gold: #d4a594;
+
+  /* Semantic UI colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --color-muted: #888888;
+
+  --color-border: rgba(201, 168, 106, 0.12);
+  --color-border-strong: rgba(201, 168, 106, 0.3);
+
+  /* Fonts — leen las CSS vars que Next.js inyecta vía next/font */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-cormorant), Georgia, serif;
+  --font-display: var(--font-cinzel), Georgia, serif;
+
+  /* Letter spacing custom */
+  --tracking-eyebrow: 0.22em;
+  --tracking-wider: 0.18em;
+  --tracking-widest: 0.4em;
+
+  /* Shadows */
+  --shadow-gold-glow: 0 12px 30px rgba(201, 168, 106, 0.25);
+  --shadow-gold-glow-lg: 0 18px 40px rgba(201, 168, 106, 0.4);
+  --shadow-deep: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
 
 @layer base {
   html {
-    @apply bg-black text-white;
+    background-color: var(--color-black);
+    color: #ffffff;
   }
   body {
-    @apply font-sans antialiased;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
 }
 
 @layer components {
   .eyebrow {
-    @apply text-xs tracking-eyebrow uppercase font-medium text-gold-primary;
+    font-size: 0.75rem;
+    letter-spacing: var(--tracking-eyebrow);
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--color-gold-primary);
   }
   .heading-display {
-    @apply font-serif font-medium;
+    font-family: var(--font-serif);
+    font-weight: 500;
+  }
+}
+
+@layer utilities {
+  .bg-gradient-gold {
+    background-image: linear-gradient(135deg, var(--color-gold-bright) 0%, var(--color-gold-primary) 100%);
+  }
+  .bg-radial-gold {
+    background-image: radial-gradient(circle at 50% 40%, rgba(201, 168, 106, 0.4), transparent 60%);
   }
 }
 ```
+
+**Nota Tailwind v4:** los tokens en `@theme` generan utilities automáticamente:
+- `--color-gold-primary` → `bg-gold-primary`, `text-gold-primary`, `border-gold-primary`
+- `--font-display` → `font-display`
+- `--tracking-eyebrow` → `tracking-eyebrow`
+- `--shadow-gold-glow` → `shadow-gold-glow`
+
+Opacidad: `bg-gold-primary/15` sigue funcionando.
 
 - [ ] **Step 2.5: Configurar fuentes Google en `app/layout.tsx`**
 
