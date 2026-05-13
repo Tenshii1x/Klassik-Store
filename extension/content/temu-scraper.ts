@@ -1,22 +1,35 @@
 import type { ScrapedProduct } from "../lib/types"
 
 /**
- * Extract Temu goods_id from URL search params or pathname patterns.
- * Examples:
- *   https://www.temu.com/pa/goods.html?goods_id=601105690528477
- *   https://share.temu.com/eEZSrP2W8AA (short URL → already redirected)
+ * Temu DOM scraper.
+ *
+ * Temu uses heavily obfuscated class names that change frequently, so we use
+ * multiple fallback strategies:
+ *  1. Try to read window globals like __INITIAL_PROPS__ or rawData (most reliable)
+ *  2. Look for meta tags (og:image, og:price, etc.)
+ *  3. Heuristic DOM selectors as last resort
  */
+
+interface WindowWithTemuData extends Window {
+  __INITIAL_PROPS__?: unknown
+  __NEXT_DATA__?: unknown
+  rawData?: unknown
+}
+
 function getGoodsId(): string | null {
   const url = new URL(location.href)
   const fromQuery = url.searchParams.get("goods_id")
   if (fromQuery) return fromQuery
-  // Sometimes embedded in path like /goods/601105690528477.html
   const pathMatch = url.pathname.match(/(\d{10,})/)
   if (pathMatch) return pathMatch[1]
   return null
 }
 
 function getTitle(): string {
+  // Prefer og:title (Temu sets this correctly)
+  const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute("content")
+  if (ogTitle && ogTitle.length > 5) return ogTitle.trim()
+
   const selectors = [
     'h1[data-id]',
     '[data-pl="goods-title"]',
@@ -24,99 +37,178 @@ function getTitle(): string {
     "h1",
     '[class*="GoodsTitle"]',
     '[class*="ProductTitle"]',
-    'meta[property="og:title"]',
   ]
   for (const sel of selectors) {
     const el = document.querySelector(sel)
     if (!el) continue
-    const text = el.tagName === "META" ? el.getAttribute("content") : el.textContent
+    const text = el.textContent
     if (text && text.trim().length > 3) return text.trim()
   }
   return document.title.split("|")[0].trim() || "Producto sin nombre"
+}
+
+/**
+ * Strip Temu's image size suffix to get the highest-res version.
+ * Examples:
+ *   _600x600.jpeg → .jpeg
+ *   _100x100.jpg → .jpg
+ *   .jpg!cf=80 → .jpg
+ */
+function normalizeImageUrl(src: string): string {
+  return src
+    .replace(/_\d+x\d+(?=\.[a-z]+(\?|!|$))/i, "")
+    .replace(/!\w+=\d+/g, "")
+}
+
+function looksLikeProductImage(src: string, el: HTMLImageElement | null): boolean {
+  if (!src) return false
+  // Must be from Temu's CDN
+  if (!src.includes("kwcdn.com") && !src.includes("temu.com")) return false
+  // Avoid known UI image paths
+  const blacklist = [
+    "/icon/", "/icons/", "/avatar/", "/banner/", "/banners/",
+    "/promo/", "/promotion/", "/sprite/", "/loading", "/placeholder",
+    "/default/", "/ad/", "/ads/", "/category/",
+    "background", "hero", "logo",
+  ]
+  for (const b of blacklist) if (src.toLowerCase().includes(b)) return false
+  // Avoid tiny images by inspecting natural size if the element is around
+  if (el) {
+    const natW = el.naturalWidth || 0
+    const natH = el.naturalHeight || 0
+    if (natW > 0 && natH > 0 && (natW < 200 || natH < 200)) return false
+  }
+  return true
 }
 
 function getImages(): { url: string; tipo: "imagen" | "video" }[] {
   const seen = new Set<string>()
   const result: { url: string; tipo: "imagen" | "video" }[] = []
 
-  // Images from Temu CDN
-  document.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
-    const src = img.src || img.dataset.src || ""
-    if (!src) return
-    if (!src.includes("kwcdn.com") && !src.includes("temu.com")) return
-    // Avoid tiny thumbnails (icons, etc) - filter by URL hints
-    if (src.includes("/icon/") || src.includes("/avatar/")) return
-    // Get the highest resolution version (strip _100x100 suffixes if any)
-    const cleanSrc = src.replace(/_\d+x\d+(?=\.[a-z]+(\?|$))/i, "")
-    if (seen.has(cleanSrc)) return
-    seen.add(cleanSrc)
-    result.push({ url: cleanSrc, tipo: "imagen" })
-  })
+  // 1. og:image is usually the main product image
+  const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute("content")
+  if (ogImage) {
+    const url = normalizeImageUrl(ogImage)
+    seen.add(url)
+    result.push({ url, tipo: "imagen" })
+  }
 
-  // Videos
-  document.querySelectorAll<HTMLSourceElement | HTMLVideoElement>("video, video source").forEach((el) => {
-    const src = el.getAttribute("src") || ""
+  // 2. Try to find the main product gallery container
+  // Temu typically uses divs with "gallery", "carousel", or "swiper" in class names
+  const gallerySelectors = [
+    '[class*="Gallery"]',
+    '[class*="MainPicture"]',
+    '[class*="ProductMedia"]',
+    '[class*="Swiper"]',
+    '[class*="Carousel"]',
+    '[role="region"][aria-label*="galer" i]',
+  ]
+  const galleryRoots: Element[] = []
+  for (const sel of gallerySelectors) {
+    document.querySelectorAll(sel).forEach((el) => galleryRoots.push(el))
+  }
+
+  // 3. Within gallery roots, collect images
+  const searchScopes: ParentNode[] = galleryRoots.length > 0 ? galleryRoots : [document]
+  for (const scope of searchScopes) {
+    scope.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
+      const src = img.src || img.dataset.src || ""
+      if (!looksLikeProductImage(src, img)) return
+      const url = normalizeImageUrl(src)
+      if (seen.has(url)) return
+      seen.add(url)
+      result.push({ url, tipo: "imagen" })
+    })
+  }
+
+  // 4. Videos (anywhere in page; usually only product has video)
+  document.querySelectorAll<HTMLVideoElement>("video").forEach((video) => {
+    let src = video.getAttribute("src") || ""
+    if (!src) {
+      const source = video.querySelector("source")
+      src = source?.getAttribute("src") || ""
+    }
     if (!src) return
     if (seen.has(src)) return
     seen.add(src)
     result.push({ url: src, tipo: "video" })
   })
 
-  // og:image meta
-  const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute("content")
-  if (ogImage && !seen.has(ogImage)) {
-    seen.add(ogImage)
-    result.unshift({ url: ogImage, tipo: "imagen" })
-  }
-
   return result.slice(0, 20)
 }
 
 function parseMoney(text: string | null | undefined): number | null {
   if (!text) return null
-  // Strip non-numeric except . and ,
-  const m = text.match(/[\d.,]+/)
-  if (!m) return null
-  const n = parseFloat(m[0].replace(/,/g, ""))
-  return isNaN(n) ? null : n
+  // Strip everything except digits, dot, comma
+  const cleaned = text.replace(/[^\d.,]/g, "").replace(/,/g, "")
+  const n = parseFloat(cleaned)
+  if (isNaN(n) || n <= 0 || n > 100000) return null
+  return n
 }
 
 function getPrice(): { actual: number | null; anterior: number | null } {
-  // Try common price selectors used across Temu variants
-  const priceSelectors = [
-    '[class*="ItemPrice"]',
-    '[class*="Price"]',
-    '[data-pl*="price"]',
-    "[data-price]",
-  ]
-  const allTexts: string[] = []
-  for (const sel of priceSelectors) {
-    document.querySelectorAll(sel).forEach((el) => {
-      const t = el.textContent?.trim()
-      if (t && t.includes("$")) allTexts.push(t)
-    })
-  }
   const nums: number[] = []
-  for (const t of allTexts) {
-    const matches = t.match(/\$\s*[\d,.]+/g) || []
-    for (const m of matches) {
-      const n = parseMoney(m)
-      if (n !== null && n > 0 && n < 10000) nums.push(n)
-    }
-  }
-  // og:price:amount fallback
+
+  // 1. og:price:amount
   const ogPrice = document.querySelector('meta[property="og:price:amount"]')?.getAttribute("content")
   const ogN = parseMoney(ogPrice)
   if (ogN) nums.push(ogN)
 
+  // 2. JSON-LD structured data
+  document.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]').forEach((s) => {
+    try {
+      const data = JSON.parse(s.textContent || "{}")
+      const offers = data.offers || data.Offer || (Array.isArray(data) ? data[0]?.offers : null)
+      if (offers) {
+        const price = offers.price || offers.Price
+        const n = parseMoney(String(price))
+        if (n) nums.push(n)
+      }
+    } catch {}
+  })
+
+  // 3. Look in DOM for $X.XX patterns within plausible price elements
+  const priceSelectors = [
+    '[class*="ItemPrice"]',
+    '[class*="GoodsPrice"]',
+    '[class*="Price"]',
+    '[data-pl*="price"]',
+    "[data-price]",
+    '[class*="amount"]',
+  ]
+  for (const sel of priceSelectors) {
+    document.querySelectorAll(sel).forEach((el) => {
+      const text = el.textContent || ""
+      const matches = text.match(/\$\s*[\d,.]+/g) || []
+      for (const m of matches) {
+        const n = parseMoney(m)
+        if (n) nums.push(n)
+      }
+    })
+  }
+
+  // 4. Last resort: scan body text for "$X.XX" patterns
+  if (nums.length === 0) {
+    const bodyText = document.body.innerText.slice(0, 20000)
+    const matches = bodyText.match(/\$\s*\d{1,4}[.,]\d{2}/g) || []
+    for (const m of matches.slice(0, 20)) {
+      const n = parseMoney(m)
+      if (n) nums.push(n)
+    }
+  }
+
   if (nums.length === 0) return { actual: null, anterior: null }
-  if (nums.length === 1) return { actual: nums[0], anterior: null }
-  const sorted = [...new Set(nums)].sort((a, b) => a - b)
-  return { actual: sorted[0], anterior: sorted[sorted.length - 1] }
+  const unique = [...new Set(nums)].sort((a, b) => a - b)
+  if (unique.length === 1) return { actual: unique[0], anterior: null }
+  // The lowest reasonable price is usually the "actual"; the highest is "anterior"
+  return { actual: unique[0], anterior: unique[unique.length - 1] }
 }
 
 function getDescription(): string | null {
-  // Try various Temu description sections
+  // og:description usually has the marketing description
+  const ogDesc = document.querySelector('meta[property="og:description"]')?.getAttribute("content")
+  if (ogDesc && ogDesc.length > 10) return ogDesc.trim().slice(0, 5000)
+
   const selectors = [
     '[class*="ProductDesc"]',
     '[class*="GoodsDesc"]',
@@ -138,25 +230,43 @@ function getVariants(): { tipo: string; valor: string; imagen_url: string | null
   const result: { tipo: string; valor: string; imagen_url: string | null }[] = []
   const seen = new Set<string>()
 
-  // Look for grouped variant pickers
-  const groups = document.querySelectorAll('[class*="SkuGroup"], [class*="VariantGroup"], [class*="SpecGroup"]')
-  groups.forEach((group) => {
-    const labelEl =
-      group.querySelector('[class*="GroupTitle"], [class*="VariantTitle"], [class*="SpecTitle"]') ||
-      group.querySelector("label, h3, h4")
-    const tipo = labelEl?.textContent?.trim().replace(/[:：]+$/, "") || "Variante"
-    const options = group.querySelectorAll('[class*="SkuItem"], [class*="VariantOption"], [class*="SpecItem"], button, [role="button"]')
-    options.forEach((opt) => {
-      const valor = opt.getAttribute("data-value") || opt.getAttribute("aria-label") || opt.textContent?.trim() || ""
-      if (!valor || valor.length < 1 || valor.length > 100) return
-      const key = `${tipo}::${valor}`
-      if (seen.has(key)) return
-      seen.add(key)
-      const img = opt.querySelector("img")
-      const imgUrl = img?.getAttribute("src") || null
-      result.push({ tipo: tipo.slice(0, 30), valor: valor.slice(0, 80), imagen_url: imgUrl })
+  // Try multiple group patterns
+  const groupSelectors = [
+    '[class*="SkuGroup"]',
+    '[class*="VariantGroup"]',
+    '[class*="SpecGroup"]',
+    '[class*="GroupContainer"]',
+    '[data-pl*="sku"]',
+  ]
+
+  for (const sel of groupSelectors) {
+    document.querySelectorAll(sel).forEach((group) => {
+      const labelEl =
+        group.querySelector('[class*="GroupTitle"], [class*="VariantTitle"], [class*="SpecTitle"], [class*="Label"]') ||
+        group.querySelector("label, h3, h4")
+      const tipo = (labelEl?.textContent?.trim() || "Variante").replace(/[:：]+\s*$/, "").slice(0, 30)
+      const options = group.querySelectorAll('[class*="Item"], [class*="Option"], button, [role="button"]')
+      options.forEach((opt) => {
+        const valor =
+          opt.getAttribute("data-value") ||
+          opt.getAttribute("aria-label") ||
+          opt.textContent?.trim() ||
+          ""
+        if (!valor || valor.length < 1 || valor.length > 100) return
+        if (/^(siguiente|atrás|cerrar|next|back|close)$/i.test(valor)) return
+        const key = `${tipo}::${valor}`
+        if (seen.has(key)) return
+        seen.add(key)
+        const img = opt.querySelector("img")
+        const imgUrl = img?.getAttribute("src") || null
+        result.push({
+          tipo,
+          valor: valor.slice(0, 80),
+          imagen_url: imgUrl ? normalizeImageUrl(imgUrl) : null,
+        })
+      })
     })
-  })
+  }
 
   return result.slice(0, 50)
 }
@@ -178,7 +288,6 @@ export function scrape(): ScrapedProduct | null {
   }
 }
 
-// Listen for popup request
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "SCRAPE") {
     try {
@@ -188,8 +297,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse({ ok: false, error: e instanceof Error ? e.message : "unknown error" })
     }
   }
-  return true // keep channel open for async
+  return true
 })
 
-// Also expose to window for debugging
-;(window as unknown as { __klassikScrape?: () => ScrapedProduct | null }).__klassikScrape = scrape
+;(window as WindowWithTemuData & { __klassikScrape?: () => ScrapedProduct | null }).__klassikScrape = scrape

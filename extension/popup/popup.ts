@@ -104,7 +104,15 @@ async function run() {
         },
         body: JSON.stringify(p),
       })
-      const json: ImportResponse = await res.json()
+      // Read body as text first so we can show it even if it's not JSON
+      const rawBody = await res.text()
+      let json: ImportResponse = {}
+      try {
+        json = JSON.parse(rawBody) as ImportResponse
+      } catch {
+        // Not JSON - probably HTML error page from Supabase gateway
+      }
+
       if (!res.ok) {
         if (json.error === "duplicate") {
           const adminLink = cfg.adminBaseUrl
@@ -118,7 +126,10 @@ async function run() {
             })
           }
         } else {
-          status.innerHTML = `<span class="error">Error: ${escapeHtml(json.error || "desconocido")}</span>`
+          // Show the real HTTP status + body so we can diagnose
+          const detail = json.error || rawBody.slice(0, 200) || "(respuesta vacía)"
+          status.innerHTML = `<span class="error">HTTP ${res.status}: ${escapeHtml(detail)}</span>`
+          console.error("Klassik import failed", { status: res.status, body: rawBody })
         }
         btn.disabled = false
         return
