@@ -35,12 +35,12 @@ export default function LoginPage() {
             </div>
             <form action={handleSubmit} className="space-y-4">
               <div>
-                <label className="eyebrow block mb-1.5">Email</label>
-                <Input name="email" type="email" required autoComplete="email" />
+                <label htmlFor="email" className="eyebrow block mb-1.5">Email</label>
+                <Input id="email" name="email" type="email" required autoComplete="email" />
               </div>
               <div>
-                <label className="eyebrow block mb-1.5">Contraseña</label>
-                <Input name="password" type="password" required autoComplete="current-password" />
+                <label htmlFor="password" className="eyebrow block mb-1.5">Contraseña</label>
+                <Input id="password" name="password" type="password" required autoComplete="current-password" />
               </div>
               {error && (
                 <p className="text-danger text-sm">{error}</p>
