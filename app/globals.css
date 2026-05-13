@@ -72,3 +72,14 @@
     background-image: radial-gradient(circle at 50% 40%, rgba(201, 168, 106, 0.4), transparent 60%);
   }
 }
+
+/* Hide number input spinner arrows */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

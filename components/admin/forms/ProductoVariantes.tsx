@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { addVariante, removeVariante } from "@/app/admin/productos/actions"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
@@ -23,11 +24,16 @@ interface Props {
 
 export function ProductoVariantes({ productoId, initial }: Props) {
   const [isPending, startTransition] = useTransition()
-  const [draft, setDraft] = useState({
+  const [draft, setDraft] = useState<{
+    tipo: string
+    valor: string
+    precio_extra: number
+    stock_unidades: number | null
+  }>({
     tipo: "Color",
     valor: "",
     precio_extra: 0,
-    stock_unidades: "" as string,
+    stock_unidades: null,
   })
 
   function handleAdd() {
@@ -39,8 +45,8 @@ export function ProductoVariantes({ productoId, initial }: Props) {
       const result = await addVariante(productoId, {
         tipo: draft.tipo,
         valor: draft.valor,
-        precio_extra: Number(draft.precio_extra) || 0,
-        stock_unidades: draft.stock_unidades === "" ? null : Number(draft.stock_unidades),
+        precio_extra: draft.precio_extra || 0,
+        stock_unidades: draft.stock_unidades,
         orden: initial.length,
       })
       if (result.error) {
@@ -48,7 +54,7 @@ export function ProductoVariantes({ productoId, initial }: Props) {
         return
       }
       toast.success("Variante agregada")
-      setDraft({ tipo: "Color", valor: "", precio_extra: 0, stock_unidades: "" })
+      setDraft({ tipo: "Color", valor: "", precio_extra: 0, stock_unidades: null })
     })
   }
 
@@ -106,21 +112,19 @@ export function ProductoVariantes({ productoId, initial }: Props) {
         </div>
         <div className="col-span-2">
           <label className="text-xs text-muted">Precio extra</label>
-          <Input
-            type="number"
-            step="0.01"
+          <NumberInput
             min={0}
             value={draft.precio_extra}
-            onChange={(e) => setDraft({ ...draft, precio_extra: Number(e.target.value) })}
+            onChange={(v) => setDraft({ ...draft, precio_extra: v ?? 0 })}
           />
         </div>
         <div className="col-span-2">
           <label className="text-xs text-muted">Stock</label>
-          <Input
-            type="number"
+          <NumberInput
+            integer
             min={0}
             value={draft.stock_unidades}
-            onChange={(e) => setDraft({ ...draft, stock_unidades: e.target.value })}
+            onChange={(v) => setDraft({ ...draft, stock_unidades: v })}
             placeholder="—"
           />
         </div>

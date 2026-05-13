@@ -2,7 +2,7 @@
 
 import { useTransition } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { bulkPublish, bulkArchive, bulkDelete, bulkApplyMargen } from "@/app/admin/productos/actions"
 import { ConfirmDialog } from "@/components/admin/ConfirmDialog"
 import { toast } from "sonner"
@@ -18,7 +18,7 @@ interface Props {
 export function BulkActionsBar({ selected, onClear }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [margen, setMargen] = useState<string>("")
+  const [margen, setMargen] = useState<number | null>(null)
 
   if (selected.length === 0) return null
 
@@ -50,12 +50,12 @@ export function BulkActionsBar({ selected, onClear }: Props) {
         Archivar
       </Button>
       <div className="flex items-center gap-1">
-        <Input
-          type="number"
+        <NumberInput
+          integer
           min={0}
           max={500}
           value={margen}
-          onChange={(e) => setMargen(e.target.value)}
+          onChange={setMargen}
           placeholder="%"
           className="w-20"
         />
@@ -63,14 +63,13 @@ export function BulkActionsBar({ selected, onClear }: Props) {
           size="sm"
           variant="ghost"
           onClick={() => {
-            const n = parseInt(margen)
-            if (isNaN(n) || n < 0) {
+            if (margen === null || margen < 0) {
               toast.error("Margen inválido")
               return
             }
-            handle(() => bulkApplyMargen(selected, n), "Margen aplicado")
+            handle(() => bulkApplyMargen(selected, margen), "Margen aplicado")
           }}
-          disabled={isPending || !margen}
+          disabled={isPending || margen === null}
         >
           <Percent size={14} />
           Aplicar margen

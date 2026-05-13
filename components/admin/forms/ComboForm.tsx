@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Card, CardBody, CardHeader } from "@/components/ui/card"
 import { ImageUploader } from "@/components/admin/ImageUploader"
 import { createCombo, updateCombo, deleteCombo } from "@/app/admin/combos/actions"
@@ -136,11 +137,11 @@ export function ComboForm({ initial, productosDisponibles }: Props) {
               <div key={p.producto_id} className="flex items-center gap-2 p-2 bg-black rounded-md border border-border">
                 <span className="flex-1 text-white text-sm">{prod?.nombre ?? "(producto no encontrado)"}</span>
                 <span className="text-muted text-xs">{formatUSD(prod?.precio_venta ?? 0)}</span>
-                <Input
-                  type="number"
+                <NumberInput
+                  integer
                   min={1}
                   value={p.cantidad}
-                  onChange={(e) => updateCantidad(p.producto_id, parseInt(e.target.value) || 1)}
+                  onChange={(v) => updateCantidad(p.producto_id, v ?? 1)}
                   className="w-20"
                 />
                 <Button type="button" variant="ghost" size="sm" onClick={() => removeProducto(p.producto_id)}>
@@ -176,12 +177,10 @@ export function ComboForm({ initial, productosDisponibles }: Props) {
         <CardBody className="space-y-3">
           <div>
             <label className="eyebrow block mb-1.5">Precio del combo</label>
-            <Input
-              type="number"
-              step="0.01"
+            <NumberInput
               min={0}
               value={form.precio_combo}
-              onChange={(e) => set("precio_combo", Number(e.target.value))}
+              onChange={(v) => set("precio_combo", v ?? 0)}
               required
             />
           </div>

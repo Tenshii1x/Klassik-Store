@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Card, CardBody } from "@/components/ui/card"
 import { ImageUploader } from "@/components/admin/ImageUploader"
 import { toSlug } from "@/lib/helpers/slug"
@@ -102,11 +103,11 @@ export function SeccionForm({ initial }: Props) {
             </div>
             <div>
               <label className="eyebrow block mb-1.5">Orden</label>
-              <Input
-                type="number"
+              <NumberInput
+                integer
                 min={0}
                 value={form.orden}
-                onChange={(e) => set("orden", parseInt(e.target.value) || 0)}
+                onChange={(v) => set("orden", v ?? 0)}
               />
             </div>
           </div>

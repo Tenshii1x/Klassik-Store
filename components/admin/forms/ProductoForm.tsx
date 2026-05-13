@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Card, CardBody, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { toSlug } from "@/lib/helpers/slug"
@@ -266,11 +267,11 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
           {form.modo === "stock" ? (
             <div>
               <label className="eyebrow block mb-1.5">Unidades disponibles</label>
-              <Input
-                type="number"
+              <NumberInput
+                integer
                 min={0}
-                value={form.stock_unidades ?? 0}
-                onChange={(e) => set("stock_unidades", parseInt(e.target.value) || 0)}
+                value={form.stock_unidades ?? null}
+                onChange={(v) => set("stock_unidades", v)}
               />
             </div>
           ) : (
@@ -308,34 +309,28 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="eyebrow block mb-1.5">Costo origen (USD)</label>
-              <Input
-                type="number"
-                step="0.01"
+              <NumberInput
                 min={0}
                 value={form.costo_temu}
-                onChange={(e) => set("costo_temu", Number(e.target.value))}
+                onChange={(v) => set("costo_temu", v ?? 0)}
               />
             </div>
             <div>
               <label className="eyebrow block mb-1.5">Costo envío unitario</label>
-              <Input
-                type="number"
-                step="0.01"
+              <NumberInput
                 min={0}
                 value={form.costo_envio_unitario}
-                onChange={(e) => set("costo_envio_unitario", Number(e.target.value))}
+                onChange={(v) => set("costo_envio_unitario", v ?? 0)}
               />
             </div>
             <div>
               <label className="eyebrow block mb-1.5">Margen override %</label>
-              <Input
-                type="number"
+              <NumberInput
+                integer
                 min={0}
                 max={500}
-                value={form.margen_override_porcentaje ?? ""}
-                onChange={(e) =>
-                  set("margen_override_porcentaje", e.target.value === "" ? null : parseInt(e.target.value))
-                }
+                value={form.margen_override_porcentaje ?? null}
+                onChange={(v) => set("margen_override_porcentaje", v)}
                 placeholder={`Global: ${margenGlobal}%`}
               />
             </div>
@@ -344,12 +339,10 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
             <div>
               <label className="eyebrow block mb-1.5">Precio de venta (cliente ve esto)</label>
               <div className="flex gap-2">
-                <Input
-                  type="number"
-                  step="0.01"
+                <NumberInput
                   min={0}
                   value={form.precio_venta}
-                  onChange={(e) => set("precio_venta", Number(e.target.value))}
+                  onChange={(v) => set("precio_venta", v ?? 0)}
                   required
                 />
                 <Button
@@ -364,14 +357,10 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
             </div>
             <div>
               <label className="eyebrow block mb-1.5">Precio anterior (oferta tachada)</label>
-              <Input
-                type="number"
-                step="0.01"
+              <NumberInput
                 min={0}
-                value={form.precio_anterior ?? ""}
-                onChange={(e) =>
-                  set("precio_anterior", e.target.value === "" ? null : Number(e.target.value))
-                }
+                value={form.precio_anterior ?? null}
+                onChange={(v) => set("precio_anterior", v)}
                 placeholder="Sin oferta"
               />
             </div>

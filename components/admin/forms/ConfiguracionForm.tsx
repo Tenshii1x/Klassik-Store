@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Card, CardBody, CardHeader } from "@/components/ui/card"
 import { ImageUploader } from "@/components/admin/ImageUploader"
 import { updateConfiguracion } from "@/app/admin/configuracion/actions"
@@ -156,12 +157,12 @@ export function ConfiguracionForm({ initial }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="eyebrow block mb-1.5">Margen global (%)</label>
-              <Input
-                type="number"
+              <NumberInput
+                integer
                 min={0}
                 max={500}
                 value={form.margen_global_porcentaje}
-                onChange={(e) => set("margen_global_porcentaje", parseInt(e.target.value) || 0)}
+                onChange={(v) => set("margen_global_porcentaje", v ?? 0)}
               />
             </div>
             <div>
