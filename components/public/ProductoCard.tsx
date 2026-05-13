@@ -17,10 +17,16 @@ interface ProductoCardData {
   producto_imagenes: { url: string; watermark_limpio: boolean }[]
 }
 
+function parseLocalDate(s: string): Date {
+  // Postgres DATE comes as "YYYY-MM-DD"; parse as local-time to avoid UTC day shift
+  const [y, m, d] = s.split("-").map(Number)
+  return new Date(y, m - 1, d)
+}
+
 function formatRange(inicio: string | null | undefined, fin: string | null | undefined) {
   if (!inicio || !fin) return null
-  const a = new Date(inicio).toLocaleDateString("es-PA", { day: "numeric", month: "short" })
-  const b = new Date(fin).toLocaleDateString("es-PA", { day: "numeric", month: "short" })
+  const a = parseLocalDate(inicio).toLocaleDateString("es-PA", { day: "numeric", month: "short" })
+  const b = parseLocalDate(fin).toLocaleDateString("es-PA", { day: "numeric", month: "short" })
   return `${a} — ${b}`
 }
 
