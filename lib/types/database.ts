@@ -669,6 +669,93 @@ export type Database = {
         }
         Relationships: []
       }
+      extension_api_keys: {
+        Row: {
+          id: string
+          nombre: string
+          key_hash: string
+          key_prefix: string
+          created_by: string | null
+          created_at: string
+          last_used_at: string | null
+          revoked_at: string | null
+        }
+        Insert: {
+          id?: string
+          nombre: string
+          key_hash: string
+          key_prefix: string
+          created_by?: string | null
+          created_at?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+        }
+        Update: {
+          id?: string
+          nombre?: string
+          key_hash?: string
+          key_prefix?: string
+          created_by?: string | null
+          created_at?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
+      importaciones_log: {
+        Row: {
+          id: string
+          producto_id: string | null
+          temu_url: string | null
+          temu_goods_id: string | null
+          api_key_id: string | null
+          status: string
+          error_message: string | null
+          imagenes_count: number
+          imagenes_failed: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          producto_id?: string | null
+          temu_url?: string | null
+          temu_goods_id?: string | null
+          api_key_id?: string | null
+          status: string
+          error_message?: string | null
+          imagenes_count?: number
+          imagenes_failed?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          producto_id?: string | null
+          temu_url?: string | null
+          temu_goods_id?: string | null
+          api_key_id?: string | null
+          status?: string
+          error_message?: string | null
+          imagenes_count?: number
+          imagenes_failed?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "importaciones_log_producto_id_fkey"
+            columns: ["producto_id"]
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+            isOneToOne: false
+          },
+          {
+            foreignKeyName: "importaciones_log_api_key_id_fkey"
+            columns: ["api_key_id"]
+            referencedRelation: "extension_api_keys"
+            referencedColumns: ["id"]
+            isOneToOne: false
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
