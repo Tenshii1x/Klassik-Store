@@ -1,0 +1,43 @@
+# dependencies
+node_modules
+# (intencionalmente sin .pnpm-store ya que usamos npm)
+
+# next.js
+.next
+out
+dist
+
+# production
+build
+
+# env
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# testing
+coverage
+playwright-report
+playwright/.cache
+test-results
+
+# editor
+.vscode
+.idea
+
+# os
+.DS_Store
+Thumbs.db
+
+# superpowers
+.superpowers/
+
+# supabase
+.branches
+.temp
