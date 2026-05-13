@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "build": "node esbuild.config.mjs",
-    "watch": "node esbuild.config.mjs --watch"
+    "watch": "node esbuild.config.mjs --watch",
+    "icons": "node scripts/make-icons.cjs",
+    "package": "npm run icons && npm run build && node scripts/package-zip.cjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.270",
