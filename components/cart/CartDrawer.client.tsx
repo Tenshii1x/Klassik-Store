@@ -8,6 +8,7 @@ import { buildWhatsappMessage, buildWhatsappUrl } from "./whatsapp-message"
 import { X } from "lucide-react"
 import { createPortal } from "react-dom"
 import { useEffect, useState } from "react"
+import Link from "next/link"
 
 interface Props {
   whatsappNumber: string | null
@@ -76,9 +77,16 @@ export function CartDrawerClient({ whatsappNumber, storeName }: Props) {
               <span className="eyebrow">Total</span>
               <span className="font-serif text-2xl text-gold-primary">{formatUSD(total)}</span>
             </div>
-            <Button type="button" size="lg" className="w-full" onClick={handleWhatsApp} disabled={!whatsappNumber}>
-              Pedir por WhatsApp
-            </Button>
+            <Link href="/checkout" onClick={() => setOpen(false)} className="block">
+              <Button type="button" size="lg" className="w-full">
+                Finalizar pedido →
+              </Button>
+            </Link>
+            {whatsappNumber && (
+              <button type="button" onClick={handleWhatsApp} className="w-full text-xs text-muted hover:text-gold-primary py-1">
+                ¿Prefieres WhatsApp? Escríbenos
+              </button>
+            )}
             <button type="button" onClick={clear} className="w-full text-xs text-muted hover:text-danger py-2">
               Vaciar carrito
             </button>
