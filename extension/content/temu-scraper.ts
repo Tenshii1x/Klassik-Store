@@ -150,6 +150,61 @@ function findThumbnailGroup(): HTMLImageElement[] {
   return best
 }
 
+function findVideoUrlInScripts(): string | null {
+  // Strategy 1: Read __NEXT_DATA__ JSON if Temu uses Next.js
+  const nextDataScript = document.getElementById("__NEXT_DATA__")
+  if (nextDataScript?.textContent) {
+    const url = searchVideoUrlInString(nextDataScript.textContent)
+    if (url) return url
+  }
+
+  // Strategy 2: Search ALL inline scripts for video URL patterns
+  const scripts = Array.from(document.querySelectorAll("script"))
+  for (const s of scripts) {
+    const text = s.textContent || ""
+    if (text.length === 0) continue
+    if (!text.includes("mp4") && !text.includes("video")) continue
+    const url = searchVideoUrlInString(text)
+    if (url) return url
+  }
+  return null
+}
+
+function searchVideoUrlInString(text: string): string | null {
+  // Common Temu video CDN patterns + structured fields
+  // Try fields first (more reliable)
+  const fieldPatterns = [
+    /"video[_-]?url"\s*:\s*"([^"]+\.mp4[^"]*)"/i,
+    /"videoUrl"\s*:\s*"([^"]+\.mp4[^"]*)"/i,
+    /"hd_video_url"\s*:\s*"([^"]+\.mp4[^"]*)"/i,
+    /"hd_url"\s*:\s*"([^"]+\.mp4[^"]*)"/i,
+  ]
+  for (const re of fieldPatterns) {
+    const m = text.match(re)
+    if (m && m[1]) return decodeAndCleanUrl(m[1])
+  }
+
+  // Fallback: any mp4 URL on Temu's CDN
+  const cdnMp4 = text.match(/https?:\\?\/\\?\/[^"'\s]*kwcdn\.com[^"'\s]+\.mp4[^"'\s]*/g)
+  if (cdnMp4 && cdnMp4[0]) return decodeAndCleanUrl(cdnMp4[0])
+
+  // Very generic fallback: any mp4 URL
+  const anyMp4 = text.match(/https?:\\?\/\\?\/[^"'\s]+\.mp4[^"'\s]*/g)
+  if (anyMp4 && anyMp4[0]) return decodeAndCleanUrl(anyMp4[0])
+
+  return null
+}
+
+function decodeAndCleanUrl(s: string): string {
+  return s
+    .replace(/\\u002F/gi, "/")
+    .replace(/\\\//g, "/")
+    .replace(/\\"/g, "")
+    .replace(/[",'\s]+$/, "")
+    .replace(/\\u0026/gi, "&")
+    .replace(/\\u003D/gi, "=")
+}
+
 function getImages(): { url: string; tipo: "imagen" | "video" }[] {
   const seenUrls = new Set<string>()
   const seenHashes = new Set<string>()
@@ -168,18 +223,18 @@ function getImages(): { url: string; tipo: "imagen" | "video" }[] {
     return true
   }
 
-  // 1. Main image from URL param (highest confidence)
+  // 1. Main image from URL param
   const urlParam = new URL(location.href).searchParams.get("top_gallery_url")
   if (urlParam) tryAddImage(urlParam)
 
-  // 2. Thumbnail strip — biggest group of product images with common ancestor
+  // 2. Thumbnail strip
   const thumbs = findThumbnailGroup()
   for (const img of thumbs) {
     const src = img.src || img.dataset.src || ""
     tryAddImage(src)
   }
 
-  // 3. Videos: look for <video> tags first, then try inline JSON
+  // 3. Video — first try DOM <video>, then inline scripts (Temu lazy-loads)
   document.querySelectorAll<HTMLVideoElement>("video").forEach((video) => {
     let src = video.getAttribute("src") || ""
     if (!src) src = video.querySelector("source")?.getAttribute("src") || ""
@@ -188,28 +243,17 @@ function getImages(): { url: string; tipo: "imagen" | "video" }[] {
     videos.push({ url: src, tipo: "video" })
   })
 
-  // 3b. Search inline scripts for video URLs (mp4 patterns on kwcdn)
   if (videos.length === 0) {
-    const scripts = document.querySelectorAll("script")
-    for (const s of scripts) {
-      const text = s.textContent || ""
-      if (!text.includes(".mp4")) continue
-      // Match Temu CDN mp4 URLs
-      const matches = text.match(/https?:\\?\/\\?\/[^"'\s]+\.mp4[^"'\s]*/g) || []
-      for (const m of matches) {
-        const url = m.replace(/\\\//g, "/").replace(/[",'\\\s]+$/, "")
-        if (seenUrls.has(url)) continue
-        seenUrls.add(url)
-        videos.push({ url, tipo: "video" })
-        if (videos.length >= 1) break
-      }
-      if (videos.length >= 1) break
+    const videoUrl = findVideoUrlInScripts()
+    if (videoUrl && !seenUrls.has(videoUrl)) {
+      seenUrls.add(videoUrl)
+      videos.push({ url: videoUrl, tipo: "video" })
     }
   }
 
-  // Combine: videos first (so they show as preview), then images
-  const result = [...videos, ...images]
-  return result.slice(0, 10)
+  // Limit images to 5 (user preference); video doesn't count toward image cap
+  const finalImages = images.slice(0, 5)
+  return [...videos, ...finalImages]
 }
 
 // ============================================================
