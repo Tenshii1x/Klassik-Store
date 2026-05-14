@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { getProductoBySlug, getProductosRelacionados } from "@/lib/catalog/queries"
+import { getProductoBySlug, getProductosRelacionados, getConfiguracion } from "@/lib/catalog/queries"
 import { ProductoGaleria } from "@/components/public/ProductoGaleria"
 import { ProductoInfo } from "@/components/public/ProductoInfo"
 import { ProductosRelacionados } from "@/components/public/ProductosRelacionados"
+import { ProductSchemaData } from "@/components/public/ProductSchemaData"
 import { ChevronRight } from "lucide-react"
 import type { Metadata } from "next"
 
@@ -28,11 +29,17 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
   const producto = await getProductoBySlug(slug)
   if (!producto) notFound()
 
-  const relacionados = await getProductosRelacionados(producto.id, producto.seccion_id)
+  const [relacionados, config] = await Promise.all([
+    getProductosRelacionados(producto.id, producto.seccion_id),
+    getConfiguracion(),
+  ])
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://klassik-store-one.vercel.app"
+  const storeName = config?.nombre_tienda || "Klassik Store"
 
   const imagenesOrdenadas = (producto.producto_imagenes || [])
     .slice()
     .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+  const imagenesLimpias = imagenesOrdenadas.filter((i) => i.watermark_limpio)
   const variantesOrdenadas = (producto.producto_variantes || [])
     .slice()
     .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
@@ -41,6 +48,11 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
 
   return (
     <>
+      <ProductSchemaData
+        producto={{ ...producto, producto_imagenes: imagenesLimpias }}
+        baseUrl={baseUrl}
+        storeName={storeName}
+      />
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-6 text-xs text-muted">
         <Link href="/" className="hover:text-gold-primary">Inicio</Link>
         <ChevronRight size={12} className="inline mx-1" />
