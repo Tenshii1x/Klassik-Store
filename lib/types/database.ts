@@ -491,8 +491,15 @@ export type Database = {
           codigo_publico: string
           nombre_cliente: string
           whatsapp_cliente: string | null
+          email_cliente: string | null
+          zona_entrega: string | null
+          direccion_entrega: string | null
           metodo_pago: string | null
           comprobante_url: string | null
+          monto_pagado_inicial: number | null
+          comprobante_inicial_url: string | null
+          monto_pagado_final: number | null
+          comprobante_final_url: string | null
           total: number
           notas_internas: string | null
           estado_interno: string
@@ -504,8 +511,15 @@ export type Database = {
           codigo_publico: string
           nombre_cliente: string
           whatsapp_cliente?: string | null
+          email_cliente?: string | null
+          zona_entrega?: string | null
+          direccion_entrega?: string | null
           metodo_pago?: string | null
           comprobante_url?: string | null
+          monto_pagado_inicial?: number | null
+          comprobante_inicial_url?: string | null
+          monto_pagado_final?: number | null
+          comprobante_final_url?: string | null
           total?: number
           notas_internas?: string | null
           estado_interno?: string
@@ -517,8 +531,15 @@ export type Database = {
           codigo_publico?: string
           nombre_cliente?: string
           whatsapp_cliente?: string | null
+          email_cliente?: string | null
+          zona_entrega?: string | null
+          direccion_entrega?: string | null
           metodo_pago?: string | null
           comprobante_url?: string | null
+          monto_pagado_inicial?: number | null
+          comprobante_inicial_url?: string | null
+          monto_pagado_final?: number | null
+          comprobante_final_url?: string | null
           total?: number
           notas_internas?: string | null
           estado_interno?: string
