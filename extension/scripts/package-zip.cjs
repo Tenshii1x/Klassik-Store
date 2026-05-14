@@ -23,7 +23,6 @@ const files = [
   "manifest.json",
   "build/background.js",
   "build/content.js",
-  "build/main-world.js",
   "build/popup.js",
   "icons/16.png",
   "icons/48.png",

@@ -5,7 +5,6 @@ const watch = process.argv.includes("--watch")
 const entries = {
   "build/popup": "popup/popup.ts",
   "build/content": "content/temu-scraper.ts",
-  "build/main-world": "content/main-world.ts",
   "build/background": "background/service-worker.ts",
 }
 
