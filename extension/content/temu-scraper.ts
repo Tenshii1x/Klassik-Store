@@ -150,20 +150,32 @@ function findThumbnailGroup(): HTMLImageElement[] {
   return best
 }
 
+function readPageGlobalsAttr(): string {
+  return document.documentElement.getAttribute("data-klassik-globals") || ""
+}
+
 function findVideoUrlInScripts(): string | null {
-  // Strategy 1: Read __NEXT_DATA__ JSON if Temu uses Next.js
+  // Strategy 1: Read page globals captured by main-world script
+  // (window.__NEXT_DATA__, rawData, __INITIAL_STATE__, etc. that Temu uses)
+  const globals = readPageGlobalsAttr()
+  if (globals.length > 0) {
+    const url = searchVideoUrlInString(globals)
+    if (url) return url
+  }
+
+  // Strategy 2: Read __NEXT_DATA__ JSON script tag textContent
   const nextDataScript = document.getElementById("__NEXT_DATA__")
   if (nextDataScript?.textContent) {
     const url = searchVideoUrlInString(nextDataScript.textContent)
     if (url) return url
   }
 
-  // Strategy 2: Search ALL inline scripts for video URL patterns
+  // Strategy 3: Search ALL inline scripts for video URL patterns
   const scripts = Array.from(document.querySelectorAll("script"))
   for (const s of scripts) {
     const text = s.textContent || ""
     if (text.length === 0) continue
-    if (!text.includes("mp4") && !text.includes("video")) continue
+    if (!text.includes("mp4") && !text.includes("m3u8") && !text.includes("video")) continue
     const url = searchVideoUrlInString(text)
     if (url) return url
   }
@@ -172,25 +184,28 @@ function findVideoUrlInScripts(): string | null {
 
 function searchVideoUrlInString(text: string): string | null {
   // Common Temu video CDN patterns + structured fields
-  // Try fields first (more reliable)
   const fieldPatterns = [
-    /"video[_-]?url"\s*:\s*"([^"]+\.mp4[^"]*)"/i,
-    /"videoUrl"\s*:\s*"([^"]+\.mp4[^"]*)"/i,
-    /"hd_video_url"\s*:\s*"([^"]+\.mp4[^"]*)"/i,
-    /"hd_url"\s*:\s*"([^"]+\.mp4[^"]*)"/i,
+    /"video[_-]?url"\s*:\s*"([^"]+\.(?:mp4|m3u8)[^"]*)"/i,
+    /"videoUrl"\s*:\s*"([^"]+\.(?:mp4|m3u8)[^"]*)"/i,
+    /"hd[_-]?video[_-]?url"\s*:\s*"([^"]+\.(?:mp4|m3u8)[^"]*)"/i,
+    /"hd[_-]?url"\s*:\s*"([^"]+\.(?:mp4|m3u8)[^"]*)"/i,
+    /"playUrl"\s*:\s*"([^"]+\.(?:mp4|m3u8)[^"]*)"/i,
+    /"play[_-]?url"\s*:\s*"([^"]+\.(?:mp4|m3u8)[^"]*)"/i,
+    /"originVideoUrl"\s*:\s*"([^"]+\.(?:mp4|m3u8)[^"]*)"/i,
+    /"main[_-]?video[_-]?url"\s*:\s*"([^"]+\.(?:mp4|m3u8)[^"]*)"/i,
   ]
   for (const re of fieldPatterns) {
     const m = text.match(re)
     if (m && m[1]) return decodeAndCleanUrl(m[1])
   }
 
-  // Fallback: any mp4 URL on Temu's CDN
-  const cdnMp4 = text.match(/https?:\\?\/\\?\/[^"'\s]*kwcdn\.com[^"'\s]+\.mp4[^"'\s]*/g)
-  if (cdnMp4 && cdnMp4[0]) return decodeAndCleanUrl(cdnMp4[0])
+  // Fallback: any video URL on Temu's CDN
+  const cdnVideo = text.match(/https?:\\?\/\\?\/[^"'\s]*kwcdn\.com[^"'\s]+\.(?:mp4|m3u8)[^"'\s]*/g)
+  if (cdnVideo && cdnVideo[0]) return decodeAndCleanUrl(cdnVideo[0])
 
-  // Very generic fallback: any mp4 URL
-  const anyMp4 = text.match(/https?:\\?\/\\?\/[^"'\s]+\.mp4[^"'\s]*/g)
-  if (anyMp4 && anyMp4[0]) return decodeAndCleanUrl(anyMp4[0])
+  // Very generic fallback: any video URL
+  const anyVideo = text.match(/https?:\\?\/\\?\/[^"'\s]+\.(?:mp4|m3u8)[^"'\s]*/g)
+  if (anyVideo && anyVideo[0]) return decodeAndCleanUrl(anyVideo[0])
 
   return null
 }

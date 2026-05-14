@@ -24,6 +24,12 @@
   "content_scripts": [
     {
       "matches": ["https://*.temu.com/*"],
+      "js": ["build/main-world.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://*.temu.com/*"],
       "js": ["build/content.js"],
       "run_at": "document_idle"
     }
