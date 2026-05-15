@@ -22,6 +22,7 @@ export function HeroHome() {
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
           <Link href="/buscar"><Button size="lg">Explorar catálogo</Button></Link>
+          <Link href="/para-el"><Button variant="ghost" size="lg">Para Él</Button></Link>
           <Link href="/para-ella"><Button variant="ghost" size="lg">Para Ella ♡</Button></Link>
         </div>
       </div>
