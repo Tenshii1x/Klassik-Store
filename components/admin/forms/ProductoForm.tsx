@@ -79,11 +79,13 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
 
   const seccionSeleccionada = secciones.find((s) => s.id === form.seccion_id)
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function guardar(estadoOverride: "borrador" | "publicado") {
+    // Pasamos el estado explícitamente al payload — no dependemos de React
+    // batching para que set("estado", ...) sea visible en este tick.
     startTransition(async () => {
       const payload: ProductoInput = {
         ...form,
+        estado: estadoOverride,
         costo_temu: form.costo_temu ?? 0,
         costo_envio_unitario: form.costo_envio_unitario ?? 0,
         precio_venta: form.precio_venta ?? 0,
@@ -93,8 +95,20 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
         toast.error(result.error)
         return
       }
-      toast.success(initial?.id ? "Producto actualizado" : "Producto creado")
+      // Sync local state too so the badge updates
+      set("estado", estadoOverride)
+      toast.success(
+        initial?.id
+          ? estadoOverride === "publicado" ? "Producto publicado ✓" : "Borrador guardado"
+          : estadoOverride === "publicado" ? "Producto creado y publicado ✓" : "Borrador creado"
+      )
     })
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    // Submit por defecto (Enter en algún campo) = guardar con el estado actual
+    guardar(form.estado as "borrador" | "publicado")
   }
 
   function toggleEtiqueta(slug: string) {
@@ -450,14 +464,14 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
           <Button
             type="button"
             variant="ghost"
-            onClick={() => set("estado", "borrador")}
+            onClick={() => guardar("borrador")}
             disabled={isPending}
           >
             Guardar borrador
           </Button>
           <Button
-            type="submit"
-            onClick={() => set("estado", "publicado")}
+            type="button"
+            onClick={() => guardar("publicado")}
             disabled={isPending}
           >
             {isPending ? "Guardando..." : initial?.id ? "Guardar y publicar" : "Crear y publicar"}
