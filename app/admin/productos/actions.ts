@@ -14,6 +14,7 @@ export async function bulkPublish(ids: string[]) {
     .in("id", ids)
   if (error) return { error: error.message }
   revalidatePath("/admin/productos")
+  revalidatePath("/", "layout")
   return { success: true, count: ids.length }
 }
 
@@ -23,6 +24,7 @@ export async function bulkArchive(ids: string[]) {
   const { error } = await supabase.from("productos").update({ estado: "archivado" }).in("id", ids)
   if (error) return { error: error.message }
   revalidatePath("/admin/productos")
+  revalidatePath("/", "layout")
   return { success: true, count: ids.length }
 }
 
@@ -32,6 +34,7 @@ export async function bulkDelete(ids: string[]) {
   const { error } = await supabase.from("productos").delete().in("id", ids)
   if (error) return { error: error.message }
   revalidatePath("/admin/productos")
+  revalidatePath("/", "layout")
   return { success: true, count: ids.length }
 }
 
@@ -44,6 +47,7 @@ export async function bulkAssignSeccion(ids: string[], seccionId: string) {
     .in("id", ids)
   if (error) return { error: error.message }
   revalidatePath("/admin/productos")
+  revalidatePath("/", "layout")
   return { success: true, count: ids.length }
 }
 
@@ -66,6 +70,7 @@ export async function bulkApplyMargen(ids: string[], margenPorcentaje: number) {
     })
   )
   revalidatePath("/admin/productos")
+  revalidatePath("/", "layout")
   return { success: true, count: ids.length }
 }
 
@@ -80,6 +85,7 @@ export async function createProducto(input: ProductoInput) {
   const { data, error } = await supabase.from("productos").insert(payload).select("id").single()
   if (error) return { error: error.message }
   revalidatePath("/admin/productos")
+  revalidatePath("/", "layout")
   redirect(`/admin/productos/${data.id}`)
 }
 
@@ -103,6 +109,7 @@ export async function updateProducto(id: string, input: ProductoInput) {
   if (error) return { error: error.message }
   revalidatePath("/admin/productos")
   revalidatePath(`/admin/productos/${id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
@@ -111,6 +118,7 @@ export async function deleteProducto(id: string) {
   const { error } = await supabase.from("productos").delete().eq("id", id)
   if (error) return { error: error.message }
   revalidatePath("/admin/productos")
+  revalidatePath("/", "layout")
   redirect("/admin/productos")
 }
 
@@ -136,6 +144,7 @@ export async function addProductoImagen(
   })
   if (error) return { error: error.message }
   revalidatePath(`/admin/productos/${producto_id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
@@ -144,6 +153,7 @@ export async function removeProductoImagen(id: string, producto_id: string) {
   const { error } = await supabase.from("producto_imagenes").delete().eq("id", id)
   if (error) return { error: error.message }
   revalidatePath(`/admin/productos/${producto_id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
@@ -153,6 +163,7 @@ export async function reorderProductoImagenes(producto_id: string, ids: string[]
     ids.map((id, idx) => supabase.from("producto_imagenes").update({ orden: idx }).eq("id", id))
   )
   revalidatePath(`/admin/productos/${producto_id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
@@ -164,6 +175,7 @@ export async function markImagenWatermarkLimpio(id: string, producto_id: string,
     .eq("id", id)
   if (error) return { error: error.message }
   revalidatePath(`/admin/productos/${producto_id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
