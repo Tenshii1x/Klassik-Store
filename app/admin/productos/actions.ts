@@ -159,12 +159,16 @@ export async function removeProductoImagen(id: string, producto_id: string) {
 
 export async function reorderProductoImagenes(producto_id: string, ids: string[]) {
   const supabase = await createSupabaseServerClient()
-  await Promise.all(
-    ids.map((id, idx) => supabase.from("producto_imagenes").update({ orden: idx }).eq("id", id))
+  const results = await Promise.all(
+    ids.map((id, idx) =>
+      supabase.from("producto_imagenes").update({ orden: idx }).eq("id", id).eq("producto_id", producto_id)
+    )
   )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
   revalidatePath(`/admin/productos/${producto_id}`)
   revalidatePath("/", "layout")
-  return { success: true }
+  return { success: true as const }
 }
 
 export async function markImagenWatermarkLimpio(id: string, producto_id: string, limpio: boolean) {

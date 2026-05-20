@@ -1,16 +1,35 @@
 "use client"
 
-import { useState, useRef, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { uploadFile, deleteFile, pathFromUrl } from "@/lib/storage/upload"
 import {
   addProductoImagen,
   removeProductoImagen,
+  reorderProductoImagenes,
   markImagenWatermarkLimpio,
 } from "@/app/admin/productos/actions"
 import { toast } from "sonner"
-import { Upload, X, AlertTriangle, Check } from "lucide-react"
+import { Upload, X, AlertTriangle, Check, GripVertical, Star } from "lucide-react"
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 interface Imagen {
   id: string
@@ -29,6 +48,51 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
   const [isPending, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [items, setItems] = useState<Imagen[]>(initial)
+
+  useEffect(() => {
+    setItems(initial)
+  }, [initial])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  async function persistOrder(next: Imagen[]) {
+    const result = await reorderProductoImagenes(
+      productoId,
+      next.map((i) => i.id)
+    )
+    if (result.error) {
+      toast.error(result.error)
+      setItems(initial)
+    }
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = items.findIndex((i) => i.id === active.id)
+    const newIndex = items.findIndex((i) => i.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const next = arrayMove(items, oldIndex, newIndex)
+    setItems(next)
+    startTransition(() => {
+      persistOrder(next)
+    })
+  }
+
+  function handleMakeCover(img: Imagen) {
+    const idx = items.findIndex((i) => i.id === img.id)
+    if (idx <= 0) return
+    const next = [img, ...items.filter((i) => i.id !== img.id)]
+    setItems(next)
+    startTransition(() => {
+      persistOrder(next)
+    })
+  }
 
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -73,68 +137,129 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
 
   return (
     <div className="space-y-3">
-      <label className="eyebrow block">Galería · {initial.length} archivos</label>
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-        {initial.map((img, idx) => (
-          <div
-            key={img.id}
-            className="relative aspect-square rounded-md overflow-hidden border border-border bg-black group"
-          >
-            {img.tipo === "video" ? (
-              <video src={img.url} className="w-full h-full object-cover" muted />
-            ) : (
-              <Image src={img.url} alt="" fill className="object-cover" sizes="200px" />
-            )}
-            {idx === 0 && (
-              <span className="absolute top-1 left-1 bg-gold-primary text-black text-[0.6rem] px-1.5 py-0.5 rounded-full font-bold">
-                PORTADA
-              </span>
-            )}
-            <div className="absolute bottom-1 left-1">
-              {img.watermark_limpio ? (
-                <Badge tone="success" className="text-[0.6rem]">
-                  <Check size={10} /> Limpia
-                </Badge>
-              ) : (
-                <Badge tone="warning" className="text-[0.6rem]">
-                  <AlertTriangle size={10} /> Sin verificar
-                </Badge>
-              )}
-            </div>
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleToggleLimpio(img)}
-                className="text-white text-xs px-3 py-1 rounded bg-success/20 border border-success hover:bg-success/30"
-                disabled={isPending}
-              >
-                {img.watermark_limpio ? "Marcar pendiente" : "Marcar limpia"}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRemove(img)}
-                className="text-white text-xs px-3 py-1 rounded bg-danger/20 border border-danger hover:bg-danger/30"
-                disabled={isPending}
-              >
-                <X size={12} className="inline" /> Borrar
-              </button>
-            </div>
+      <label className="eyebrow block">Galería · {items.length} archivos</label>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+            {items.map((img, idx) => (
+              <SortableImagen
+                key={img.id}
+                img={img}
+                isCover={idx === 0}
+                isPending={isPending}
+                onMakeCover={() => handleMakeCover(img)}
+                onToggleLimpio={() => handleToggleLimpio(img)}
+                onRemove={() => handleRemove(img)}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={uploading}
+              className="aspect-square rounded-md border-2 border-dashed border-border-strong flex flex-col items-center justify-center gap-1 text-muted hover:border-gold-primary hover:text-gold-primary transition-colors"
+            >
+              <Upload size={20} />
+              <span className="text-xs">{uploading ? "Subiendo..." : "Agregar"}</span>
+            </button>
           </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="aspect-square rounded-md border-2 border-dashed border-border-strong flex flex-col items-center justify-center gap-1 text-muted hover:border-gold-primary hover:text-gold-primary transition-colors"
-        >
-          <Upload size={20} />
-          <span className="text-xs">{uploading ? "Subiendo..." : "Agregar"}</span>
-        </button>
-      </div>
+        </SortableContext>
+      </DndContext>
       <input ref={inputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFiles} />
       <p className="text-muted text-xs">
-        El primer archivo es la portada. Antes de publicar, marca cada imagen/video como &ldquo;limpia&rdquo; (sin watermark de origen visible).
+        Arrastra para reordenar. El primer archivo es la portada — usa el botón <Star size={10} className="inline" /> para hacer portada en un toque. Antes de publicar, marca cada imagen/video como &ldquo;limpia&rdquo; (sin watermark de origen visible).
       </p>
+    </div>
+  )
+}
+
+interface ItemProps {
+  img: Imagen
+  isCover: boolean
+  isPending: boolean
+  onMakeCover: () => void
+  onToggleLimpio: () => void
+  onRemove: () => void
+}
+
+function SortableImagen({ img, isCover, isPending, onMakeCover, onToggleLimpio, onRemove }: ItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: img.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 20 : undefined,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative aspect-square rounded-md overflow-hidden border bg-black group ${
+        isDragging ? "border-gold-primary shadow-deep opacity-90" : "border-border"
+      }`}
+    >
+      {img.tipo === "video" ? (
+        <video src={img.url} className="w-full h-full object-cover pointer-events-none" muted />
+      ) : (
+        <Image src={img.url} alt="" fill className="object-cover pointer-events-none" sizes="200px" />
+      )}
+
+      {isCover && (
+        <span className="absolute top-1 left-1 bg-gold-primary text-black text-[0.6rem] px-1.5 py-0.5 rounded-full font-bold z-10">
+          PORTADA
+        </span>
+      )}
+
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        aria-label="Arrastrar para reordenar"
+        className="absolute top-1 right-1 z-20 bg-black/80 text-white rounded p-1.5 cursor-grab active:cursor-grabbing touch-none hover:bg-black/95 hover:text-gold-primary transition-colors"
+      >
+        <GripVertical size={14} />
+      </button>
+
+      <div className="absolute bottom-1 left-1 z-10">
+        {img.watermark_limpio ? (
+          <Badge tone="success" className="text-[0.6rem]">
+            <Check size={10} /> Limpia
+          </Badge>
+        ) : (
+          <Badge tone="warning" className="text-[0.6rem]">
+            <AlertTriangle size={10} /> Sin verificar
+          </Badge>
+        )}
+      </div>
+
+      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 pointer-events-none">
+        {!isCover && (
+          <button
+            type="button"
+            onClick={onMakeCover}
+            className="pointer-events-auto text-black text-xs px-3 py-1 rounded bg-gold-primary hover:bg-gold-light font-semibold flex items-center gap-1"
+            disabled={isPending}
+          >
+            <Star size={12} /> Hacer portada
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onToggleLimpio}
+          className="pointer-events-auto text-white text-xs px-3 py-1 rounded bg-success/20 border border-success hover:bg-success/30"
+          disabled={isPending}
+        >
+          {img.watermark_limpio ? "Marcar pendiente" : "Marcar limpia"}
+        </button>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="pointer-events-auto text-white text-xs px-3 py-1 rounded bg-danger/20 border border-danger hover:bg-danger/30"
+          disabled={isPending}
+        >
+          <X size={12} className="inline" /> Borrar
+        </button>
+      </div>
     </div>
   )
 }

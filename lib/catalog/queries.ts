@@ -56,6 +56,8 @@ export async function getProductosBySeccion(
   else if (filters.sort === "nuevos") query = query.order("published_at", { ascending: false, nullsFirst: false })
   else query = query.order("destacado", { ascending: false }).order("published_at", { ascending: false })
 
+  query = query.order("orden", { referencedTable: "producto_imagenes", ascending: true })
+
   const { data } = await query.limit(100)
   return data || []
 }
@@ -73,6 +75,8 @@ export async function getProductoBySlug(slug: string) {
     `)
     .eq("estado", "publicado")
     .eq("slug", slug)
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
+    .order("orden", { referencedTable: "producto_variantes", ascending: true })
     .single()
   return data
 }
@@ -86,6 +90,7 @@ export async function getProductosRelacionados(productoId: string, seccionId: st
     .eq("estado", "publicado")
     .eq("seccion_id", seccionId)
     .neq("id", productoId)
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
     .limit(4)
   return data || []
 }
@@ -100,6 +105,7 @@ export async function getTodosProductos(limit = 100) {
     .eq("estado", "publicado")
     .order("destacado", { ascending: false })
     .order("published_at", { ascending: false, nullsFirst: false })
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
     .limit(limit)
   return data || []
 }
@@ -114,6 +120,7 @@ export async function getProductosDestacados(limit = 8) {
     .eq("estado", "publicado")
     .eq("destacado", true)
     .order("published_at", { ascending: false })
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
     .limit(limit)
   return data || []
 }
@@ -127,6 +134,7 @@ export async function getProductosRecientes(limit = 8) {
     )
     .eq("estado", "publicado")
     .order("published_at", { ascending: false, nullsFirst: false })
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
     .limit(limit)
   return data || []
 }
@@ -141,6 +149,7 @@ export async function buscarProductos(q: string) {
     )
     .eq("estado", "publicado")
     .or(`nombre.ilike.%${q}%,descripcion.ilike.%${q}%,modelo.ilike.%${q}%`)
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
     .limit(40)
   return data || []
 }
@@ -154,6 +163,7 @@ export async function getProductosPorEtiqueta(slug: string) {
     )
     .eq("estado", "publicado")
     .contains("etiquetas", [slug])
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
   return data || []
 }
 
