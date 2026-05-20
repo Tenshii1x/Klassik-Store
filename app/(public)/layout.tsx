@@ -5,7 +5,6 @@ import { CartProvider } from "@/components/cart/CartProvider"
 import { CartDrawer } from "@/components/cart/CartDrawer"
 import { WishlistProvider } from "@/components/wishlist/WishlistProvider"
 import { FloatingWhatsApp } from "@/components/public/FloatingWhatsApp"
-import { EmailCapture } from "@/components/public/EmailCapture"
 import { Toaster } from "@/components/admin/Toast"
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -18,7 +17,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <Footer />
         <FloatingWhatsApp />
         <CartDrawer />
-        <EmailCapture />
         <Toaster />
       </WishlistProvider>
     </CartProvider>
