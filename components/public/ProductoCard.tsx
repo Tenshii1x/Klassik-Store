@@ -1,7 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
 import { formatUSD } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
 import { ArrowRight } from "lucide-react"
 import { WishlistButton } from "@/components/wishlist/WishlistButton"
 
@@ -15,11 +14,10 @@ interface ProductoCardData {
   stock_unidades?: number | null
   fecha_llegada_inicio?: string | null
   fecha_llegada_fin?: string | null
-  producto_imagenes: { url: string; watermark_limpio: boolean }[]
+  producto_imagenes: { url: string; tipo?: string | null; watermark_limpio: boolean }[]
 }
 
 function parseLocalDate(s: string): Date {
-  // Postgres DATE comes as "YYYY-MM-DD"; parse as local-time to avoid UTC day shift
   const [y, m, d] = s.split("-").map(Number)
   return new Date(y, m - 1, d)
 }
@@ -32,7 +30,9 @@ function formatRange(inicio: string | null | undefined, fin: string | null | und
 }
 
 export function ProductoCard({ p }: { p: ProductoCardData }) {
-  const imagen = p.producto_imagenes.filter((i) => i.watermark_limpio)[0]?.url
+  const limpias = p.producto_imagenes.filter((i) => i.watermark_limpio)
+  const portada = limpias[0]
+  const portadaEsVideo = portada?.tipo === "video"
   const isStock = p.modo === "stock"
   const agotado = isStock && (p.stock_unidades ?? 0) === 0
   const fechaRango = formatRange(p.fecha_llegada_inicio, p.fecha_llegada_fin)
@@ -43,22 +43,42 @@ export function ProductoCard({ p }: { p: ProductoCardData }) {
       className="group block bg-black-surface border border-border rounded-md overflow-hidden hover:border-gold-primary/50 hover:shadow-deep transition-all"
     >
       <div className="aspect-square relative bg-gradient-to-br from-gold-deep/30 to-black overflow-hidden">
-        {imagen && (
-          <Image
-            src={imagen}
-            alt={p.nombre}
-            fill
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 300px"
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        )}
-        <div className="absolute top-3 left-3">
-          {agotado ? (
-            <Badge tone="danger">Agotado</Badge>
-          ) : isStock ? (
-            <Badge tone="gold">Entrega inmediata</Badge>
+        {portada && (
+          portadaEsVideo ? (
+            <video
+              src={portada.url}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label={p.nombre}
+            />
           ) : (
-            <Badge tone="info">Pre-orden</Badge>
+            <Image
+              src={portada.url}
+              alt={p.nombre}
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 300px"
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          )
+        )}
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
+        <div className="absolute top-3 left-3 z-10">
+          {agotado ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.65rem] font-bold uppercase tracking-wider bg-danger text-white shadow-lg ring-1 ring-white/10">
+              Agotado
+            </span>
+          ) : isStock ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.65rem] font-bold uppercase tracking-wider bg-gold-primary text-black shadow-lg ring-1 ring-black/20">
+              Entrega inmediata
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.65rem] font-bold uppercase tracking-wider bg-black/85 backdrop-blur-sm text-white shadow-lg ring-1 ring-gold-primary/40">
+              Pre-orden
+            </span>
           )}
         </div>
         <WishlistButton productoId={p.id} className="absolute top-3 right-3 z-10" />

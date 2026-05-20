@@ -41,7 +41,7 @@ export async function getProductosBySeccion(
   let query = supabase
     .from("productos")
     .select(
-      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, destacado, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, watermark_limpio)"
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, destacado, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, tipo, watermark_limpio)"
     )
     .eq("estado", "publicado")
     .eq("seccion_id", seccionId)
@@ -86,7 +86,9 @@ export async function getProductosRelacionados(productoId: string, seccionId: st
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase
     .from("productos")
-    .select("id, nombre, slug, precio_venta, precio_anterior, modo, producto_imagenes(url, watermark_limpio)")
+    .select(
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, tipo, watermark_limpio)"
+    )
     .eq("estado", "publicado")
     .eq("seccion_id", seccionId)
     .neq("id", productoId)
@@ -100,7 +102,7 @@ export async function getTodosProductos(limit = 100) {
   const { data } = await supabase
     .from("productos")
     .select(
-      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, watermark_limpio)"
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, tipo, watermark_limpio)"
     )
     .eq("estado", "publicado")
     .order("destacado", { ascending: false })
@@ -115,7 +117,7 @@ export async function getProductosDestacados(limit = 8) {
   const { data } = await supabase
     .from("productos")
     .select(
-      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, watermark_limpio)"
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, tipo, watermark_limpio)"
     )
     .eq("estado", "publicado")
     .eq("destacado", true)
@@ -130,7 +132,7 @@ export async function getProductosRecientes(limit = 8) {
   const { data } = await supabase
     .from("productos")
     .select(
-      "id, nombre, slug, precio_venta, precio_anterior, modo, producto_imagenes(url, watermark_limpio)"
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, tipo, watermark_limpio)"
     )
     .eq("estado", "publicado")
     .order("published_at", { ascending: false, nullsFirst: false })
@@ -145,7 +147,7 @@ export async function buscarProductos(q: string) {
   const { data } = await supabase
     .from("productos")
     .select(
-      "id, nombre, slug, precio_venta, precio_anterior, modo, producto_imagenes(url, watermark_limpio)"
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, tipo, watermark_limpio)"
     )
     .eq("estado", "publicado")
     .or(`nombre.ilike.%${q}%,descripcion.ilike.%${q}%,modelo.ilike.%${q}%`)
@@ -159,7 +161,7 @@ export async function getProductosPorEtiqueta(slug: string) {
   const { data } = await supabase
     .from("productos")
     .select(
-      "id, nombre, slug, precio_venta, precio_anterior, modo, etiquetas, producto_imagenes(url, watermark_limpio)"
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, etiquetas, producto_imagenes(url, tipo, watermark_limpio)"
     )
     .eq("estado", "publicado")
     .contains("etiquetas", [slug])
