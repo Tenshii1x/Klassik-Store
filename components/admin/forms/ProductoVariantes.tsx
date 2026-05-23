@@ -8,6 +8,7 @@ import { addVariante, removeVariante, updateVariante } from "@/app/admin/product
 import { toast } from "sonner"
 import { Plus, Trash2, ImageIcon, Pencil, Check, X } from "lucide-react"
 import Image from "next/image"
+import { uploadFile, deleteFile, pathFromUrl } from "@/lib/storage/upload"
 
 interface Variante {
   id: string
@@ -45,6 +46,25 @@ export function ProductoVariantes({ productoId, initial }: Props) {
     stock_unidades: number | null
     imagen_url: string | null
   }>({ tipo: "", valor: "", precio_extra: 0, stock_unidades: null, imagen_url: null })
+  const [newDraftImagenUrl, setNewDraftImagenUrl] = useState<string | null>(null)
+  const [uploadingFor, setUploadingFor] = useState<"new" | string | null>(null)
+
+  async function uploadVarianteImagen(
+    file: File,
+    target: "new" | string
+  ): Promise<string | null> {
+    setUploadingFor(target)
+    const ext = file.name.split(".").pop() || "jpg"
+    const idPart = target === "new" ? "nueva" : target
+    const path = `productos/${productoId}/variantes/${idPart}-${Date.now()}.${ext}`
+    const { url, error } = await uploadFile("productos", path, file)
+    setUploadingFor(null)
+    if (error) {
+      toast.error(`Error subiendo: ${error}`)
+      return null
+    }
+    return url
+  }
 
   function handleAdd() {
     if (!draft.tipo || !draft.valor) {
@@ -57,6 +77,7 @@ export function ProductoVariantes({ productoId, initial }: Props) {
         valor: draft.valor,
         precio_extra: draft.precio_extra ?? 0,
         stock_unidades: draft.stock_unidades,
+        imagen_url: newDraftImagenUrl,
         orden: initial.length,
       })
       if (result.error) {
@@ -65,6 +86,7 @@ export function ProductoVariantes({ productoId, initial }: Props) {
       }
       toast.success("Variante agregada")
       setDraft({ tipo: "Color", valor: "", precio_extra: null, stock_unidades: null })
+      setNewDraftImagenUrl(null)
     })
   }
 
@@ -123,17 +145,53 @@ export function ProductoVariantes({ productoId, initial }: Props) {
         <div key={v.id} className="grid grid-cols-12 gap-2 items-center p-2 bg-black rounded-md border border-border">
           {editingId === v.id ? (
             <>
-              {/* Thumbnail (placeholder por ahora — Task 5 lo vuelve uploader) */}
               <div className="col-span-1">
-                {v.imagen_url ? (
-                  <div className="relative w-12 h-12 rounded overflow-hidden border border-border">
-                    <Image src={v.imagen_url} alt="" fill className="object-cover" sizes="48px" />
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 rounded border border-border bg-gold-deep/10 flex items-center justify-center text-gold-deep">
-                    <ImageIcon size={16} />
-                  </div>
-                )}
+                <label className="block w-12 h-12 cursor-pointer relative group">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingFor === v.id}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const newUrl = await uploadVarianteImagen(file, v.id)
+                      if (!newUrl) return
+                      if (editDraft.imagen_url && editDraft.imagen_url !== newUrl) {
+                        const prevPath = pathFromUrl(editDraft.imagen_url, "productos")
+                        if (prevPath) await deleteFile("productos", prevPath)
+                      }
+                      setEditDraft({ ...editDraft, imagen_url: newUrl })
+                    }}
+                  />
+                  {editDraft.imagen_url ? (
+                    <>
+                      <div className="relative w-12 h-12 rounded overflow-hidden border border-gold-primary/40 group-hover:border-gold-primary">
+                        <Image src={editDraft.imagen_url} alt="" fill className="object-cover" sizes="48px" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const prev = editDraft.imagen_url
+                          setEditDraft({ ...editDraft, imagen_url: null })
+                          if (prev) {
+                            const prevPath = pathFromUrl(prev, "productos")
+                            if (prevPath) await deleteFile("productos", prevPath)
+                          }
+                        }}
+                        className="absolute -top-1 -right-1 bg-black/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100"
+                      >
+                        <X size={10} />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="w-12 h-12 rounded border border-dashed border-gold-deep/40 bg-gold-deep/5 flex items-center justify-center text-gold-deep group-hover:border-gold-primary group-hover:text-gold-primary">
+                      {uploadingFor === v.id ? <span className="text-[10px]">...</span> : <ImageIcon size={16} />}
+                    </div>
+                  )}
+                </label>
               </div>
               <div className="col-span-2">
                 <select
@@ -181,15 +239,7 @@ export function ProductoVariantes({ productoId, initial }: Props) {
           ) : (
             <>
               <div className="col-span-1">
-                {v.imagen_url ? (
-                  <div className="relative w-12 h-12 rounded overflow-hidden border border-border">
-                    <Image src={v.imagen_url} alt="" fill className="object-cover" sizes="48px" />
-                  </div>
-                ) : (
-                  <div className="w-12 h-12 rounded border border-border bg-gold-deep/10 flex items-center justify-center text-gold-deep">
-                    <ImageIcon size={16} />
-                  </div>
-                )}
+                <VariantThumbReadonly url={v.imagen_url} />
               </div>
               <div className="col-span-2 text-sm">
                 <span className="text-muted text-xs">Tipo:</span> {v.tipo}
@@ -214,7 +264,38 @@ export function ProductoVariantes({ productoId, initial }: Props) {
         </div>
       ))}
       <div className="grid grid-cols-12 gap-2 items-end pt-2 border-t border-border">
-        <div className="col-span-3">
+        <div className="col-span-1">
+          <label className="text-xs text-muted block mb-1">Foto</label>
+          <label className="block w-12 h-12 cursor-pointer relative group">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploadingFor === "new"}
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const newUrl = await uploadVarianteImagen(file, "new")
+                if (!newUrl) return
+                if (newDraftImagenUrl) {
+                  const prevPath = pathFromUrl(newDraftImagenUrl, "productos")
+                  if (prevPath) await deleteFile("productos", prevPath)
+                }
+                setNewDraftImagenUrl(newUrl)
+              }}
+            />
+            {newDraftImagenUrl ? (
+              <div className="relative w-12 h-12 rounded overflow-hidden border border-gold-primary/40 group-hover:border-gold-primary">
+                <Image src={newDraftImagenUrl} alt="" fill className="object-cover" sizes="48px" />
+              </div>
+            ) : (
+              <div className="w-12 h-12 rounded border border-dashed border-gold-deep/40 bg-gold-deep/5 flex items-center justify-center text-gold-deep group-hover:border-gold-primary group-hover:text-gold-primary">
+                {uploadingFor === "new" ? <span className="text-[10px]">...</span> : <ImageIcon size={16} />}
+              </div>
+            )}
+          </label>
+        </div>
+        <div className="col-span-2">
           <label className="text-xs text-muted">Tipo</label>
           <select
             value={draft.tipo}
@@ -253,10 +334,27 @@ export function ProductoVariantes({ productoId, initial }: Props) {
             placeholder="—"
           />
         </div>
-        <Button type="button" size="sm" onClick={handleAdd} disabled={isPending}>
-          <Plus size={14} />
-        </Button>
+        <div className="col-span-1">
+          <Button type="button" size="sm" onClick={handleAdd} disabled={isPending}>
+            <Plus size={14} />
+          </Button>
+        </div>
       </div>
+    </div>
+  )
+}
+
+function VariantThumbReadonly({ url }: { url: string | null }) {
+  if (url) {
+    return (
+      <div className="relative w-12 h-12 rounded overflow-hidden border border-border">
+        <Image src={url} alt="" fill className="object-cover" sizes="48px" />
+      </div>
+    )
+  }
+  return (
+    <div className="w-12 h-12 rounded border border-border bg-gold-deep/10 flex items-center justify-center text-gold-deep">
+      <ImageIcon size={16} />
     </div>
   )
 }
