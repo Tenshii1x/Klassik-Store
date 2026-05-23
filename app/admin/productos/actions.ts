@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { productoSchema, varianteSchema, type ProductoInput, type VarianteInput } from "@/lib/validations/producto"
 import { redirect } from "next/navigation"
+import { pathFromUrl } from "@/lib/storage/upload"
 
 export async function bulkPublish(ids: string[]) {
   if (ids.length === 0) return { error: "Sin selección" }
@@ -192,6 +193,7 @@ export async function addVariante(producto_id: string, input: VarianteInput) {
   const { error } = await supabase.from("producto_variantes").insert({ producto_id, ...parsed.data })
   if (error) return { error: error.message }
   revalidatePath(`/admin/productos/${producto_id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
@@ -199,16 +201,59 @@ export async function updateVariante(id: string, producto_id: string, input: Var
   const parsed = varianteSchema.safeParse(input)
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Datos inválidos" }
   const supabase = await createSupabaseServerClient()
+
+  // Leer imagen anterior para detectar cambio
+  const { data: existing } = await supabase
+    .from("producto_variantes")
+    .select("imagen_url")
+    .eq("id", id)
+    .single()
+
   const { error } = await supabase.from("producto_variantes").update(parsed.data).eq("id", id)
   if (error) return { error: error.message }
+
+  // Si la imagen cambió y había una previa, borrar el archivo viejo
+  const previa = existing?.imagen_url ?? null
+  const nueva = parsed.data.imagen_url ?? null
+  if (previa && previa !== nueva) {
+    const path = pathFromUrl(previa, "productos")
+    if (path) {
+      const { error: removeErr } = await supabase.storage.from("productos").remove([path])
+      if (removeErr) {
+        console.warn("[updateVariante] no se pudo borrar imagen anterior:", path, removeErr.message)
+      }
+    }
+  }
+
   revalidatePath(`/admin/productos/${producto_id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
 export async function removeVariante(id: string, producto_id: string) {
   const supabase = await createSupabaseServerClient()
+
+  // Leer imagen previa para borrar el archivo después
+  const { data: existing } = await supabase
+    .from("producto_variantes")
+    .select("imagen_url")
+    .eq("id", id)
+    .single()
+
   const { error } = await supabase.from("producto_variantes").delete().eq("id", id)
   if (error) return { error: error.message }
+
+  if (existing?.imagen_url) {
+    const path = pathFromUrl(existing.imagen_url, "productos")
+    if (path) {
+      const { error: removeErr } = await supabase.storage.from("productos").remove([path])
+      if (removeErr) {
+        console.warn("[removeVariante] no se pudo borrar imagen:", path, removeErr.message)
+      }
+    }
+  }
+
   revalidatePath(`/admin/productos/${producto_id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }

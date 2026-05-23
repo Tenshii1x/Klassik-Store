@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatUSD } from "@/lib/utils"
@@ -46,7 +46,13 @@ function formatRange(inicio: string | null, fin: string | null) {
   return `${a} y ${b}`
 }
 
-export function ProductoInfo({ p }: { p: Producto }) {
+export function ProductoInfo({
+  p,
+  onVariantChange,
+}: {
+  p: Producto
+  onVariantChange?: (variante: Variante | null) => void
+}) {
   const variantsByTipo = p.producto_variantes.reduce<Record<string, Variante[]>>((acc, v) => {
     if (!acc[v.tipo]) acc[v.tipo] = []
     acc[v.tipo].push(v)
@@ -58,6 +64,12 @@ export function ProductoInfo({ p }: { p: Producto }) {
   )
   const [cantidad, setCantidad] = useState(1)
   const { add, setOpen } = useCart()
+
+  useEffect(() => {
+    const initial = p.producto_variantes.find((v) => v.id === selectedVariantId) ?? null
+    onVariantChange?.(initial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const selectedVariant = p.producto_variantes.find((v) => v.id === selectedVariantId)
   const precioFinal = p.precio_venta + (selectedVariant?.precio_extra ?? 0)
@@ -120,7 +132,10 @@ export function ProductoInfo({ p }: { p: Producto }) {
                     <button
                       key={v.id}
                       type="button"
-                      onClick={() => setSelectedVariantId(v.id)}
+                      onClick={() => {
+                        setSelectedVariantId(v.id)
+                        onVariantChange?.(v)
+                      }}
                       disabled={variantAgotado}
                       className={`px-4 py-2 rounded-md border text-sm transition-colors ${
                         isSel

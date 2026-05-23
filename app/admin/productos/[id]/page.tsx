@@ -31,7 +31,7 @@ export default async function EditarProductoPage({
       .order("orden"),
     supabase
       .from("producto_variantes")
-      .select("id, tipo, valor, precio_extra, stock_unidades, orden")
+      .select("id, tipo, valor, precio_extra, stock_unidades, imagen_url, orden")
       .eq("producto_id", id)
       .order("orden"),
   ])
