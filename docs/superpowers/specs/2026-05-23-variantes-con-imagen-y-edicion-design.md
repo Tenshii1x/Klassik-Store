@@ -15,8 +15,10 @@ Este diseño cubre dos funcionalidades enlazadas:
 ## Estado actual relevante
 
 - **DB:** `producto_variantes.imagen_url text` **ya existe** en `supabase/migrations/20260512000000_schema.sql:97`. Solo hay que usarla.
+- **Schema Zod:** `varianteSchema` en `lib/validations/producto.ts:47` **ya incluye** `imagen_url`. No hay que crear schema nuevo.
+- **Server actions:** `addVariante` y `updateVariante` **ya existen** en `app/admin/productos/actions.ts:188-206` y aceptan `imagen_url`. Solo falta agregar limpieza de archivos en storage cuando la imagen cambia o se borra la variante.
 - **Tipo público:** la interfaz `Variante` en `components/public/ProductoInfo.tsx:13-20` ya declara `imagen_url: string | null`. El tipo está; la lógica no.
-- **Admin:** `components/admin/forms/ProductoVariantes.tsx` solo expone `addVariante` y `removeVariante`. Sin edición, sin uploader.
+- **Admin UI:** `components/admin/forms/ProductoVariantes.tsx` solo llama `addVariante` y `removeVariante`. Sin edición, sin uploader.
 - **Público:** `ProductoInfo` y `ProductoGaleria` son hermanos sin estado compartido — la galería tiene `useState(active)` propio que nadie de afuera puede mover.
 
 ## Decisiones de producto
@@ -47,21 +49,22 @@ Reutiliza `uploadFile()` de `lib/storage/upload.ts`. No se duplica lógica de su
 
 ### Server actions (en `app/admin/productos/actions.ts`)
 
-- **`addVariante(productoId, data)`** — agregar parámetro opcional `imagen_url: string | null` al payload.
-- **`updateVariante(varianteId, productoId, data)`** — **nuevo**. Recibe `{ tipo, valor, precio_extra, stock_unidades, imagen_url }`. Valida con `varianteUpdateSchema`. Antes de hacer `update`, lee la variante actual: si `imagen_url` cambió (incluyendo a null) y la anterior no era null, llama `deleteFile()` con el path derivado de la URL anterior. Luego hace `update` en Supabase y revalida `app/admin/productos/[id]` y `app/(public)/producto/[slug]`.
-- **`removeVariante`** — sin cambios.
+- **`addVariante`** — sin cambios (ya acepta `imagen_url` vía `varianteSchema`).
+- **`updateVariante`** — modificar para limpiar storage: antes del `update`, leer la variante actual; si `imagen_url` cambió (incluido a null) y la anterior no era null, derivar el path con `pathFromUrl()` y llamar `deleteFile("productos", path)`. Además revalidar también la ruta pública del producto (hoy solo revalida el admin).
+- **`removeVariante`** — modificar para limpiar storage: antes del `delete`, leer `imagen_url` de la variante; si existe, derivar path y llamar `deleteFile()`.
 
 ### Validación
 
-Extender `lib/validations/producto.ts`:
+Sin cambios. `varianteSchema` en `lib/validations/producto.ts:42-49` ya cubre los 5 campos editables. La firma actual es:
 
 ```ts
-export const varianteUpdateSchema = z.object({
-  tipo: z.string().min(1).max(40),
-  valor: z.string().min(1).max(60),
-  precio_extra: z.number().min(0),
-  stock_unidades: z.number().int().min(0).nullable(),
-  imagen_url: z.string().url().nullable(),
+export const varianteSchema = z.object({
+  tipo: z.string().min(1).max(30),
+  valor: z.string().min(1).max(80),
+  precio_extra: z.number().min(0).default(0),
+  stock_unidades: z.number().int().min(0).optional().nullable(),
+  imagen_url: z.string().url().optional().nullable(),
+  orden: z.number().int().min(0).default(0),
 })
 ```
 
@@ -153,8 +156,7 @@ Cliente público abre ficha
 ## Archivos afectados
 
 **Cambios:**
-- `app/admin/productos/actions.ts` — `addVariante` (param opcional), `updateVariante` (nuevo), `removeVariante` (limpieza de imagen)
-- `lib/validations/producto.ts` — `varianteUpdateSchema`
+- `app/admin/productos/actions.ts` — `updateVariante` (limpieza de imagen + revalidate público), `removeVariante` (limpieza de imagen)
 - `components/admin/forms/ProductoVariantes.tsx` — refactor a edición inline + uploader por fila
 - `components/public/ProductoGaleria.tsx` — props `activeImageUrl`, `onSelectImage`, `extraImages`
 - `components/public/ProductoInfo.tsx` — prop `onVariantChange`
