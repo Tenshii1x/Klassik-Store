@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { cn } from "@/lib/utils"
 
 interface Imagen {
@@ -11,9 +11,29 @@ interface Imagen {
   watermark_limpio: boolean
 }
 
-export function ProductoGaleria({ imagenes, nombre }: { imagenes: Imagen[]; nombre: string }) {
-  const clean = imagenes.filter((i) => i.watermark_limpio)
-  const [active, setActive] = useState(0)
+interface Props {
+  imagenes: Imagen[]
+  nombre: string
+  activeUrl?: string | null
+  onSelectUrl?: (url: string) => void
+  extraImages?: Imagen[]
+}
+
+export function ProductoGaleria({ imagenes, nombre, activeUrl, onSelectUrl, extraImages }: Props) {
+  const clean = useMemo(() => {
+    const base = imagenes.filter((i) => i.watermark_limpio)
+    if (!extraImages?.length) return base
+    const baseUrls = new Set(base.map((i) => i.url))
+    const extras = extraImages.filter((i) => !baseUrls.has(i.url))
+    return [...extras, ...base]
+  }, [imagenes, extraImages])
+
+  const isControlled = activeUrl !== undefined && onSelectUrl !== undefined
+  const [internalIdx, setInternalIdx] = useState(0)
+
+  const activeIdx = isControlled
+    ? Math.max(0, clean.findIndex((i) => i.url === activeUrl))
+    : internalIdx
 
   if (clean.length === 0) {
     return (
@@ -23,7 +43,15 @@ export function ProductoGaleria({ imagenes, nombre }: { imagenes: Imagen[]; nomb
     )
   }
 
-  const current = clean[active]
+  const current = clean[activeIdx] ?? clean[0]
+
+  function selectIdx(idx: number) {
+    if (isControlled) {
+      onSelectUrl!(clean[idx].url)
+    } else {
+      setInternalIdx(idx)
+    }
+  }
 
   return (
     <div className="space-y-3">
@@ -31,19 +59,27 @@ export function ProductoGaleria({ imagenes, nombre }: { imagenes: Imagen[]; nomb
         {current.tipo === "video" ? (
           <video src={current.url} controls className="w-full h-full object-contain" />
         ) : (
-          <Image src={current.url} alt={nombre} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" priority />
+          <Image
+            key={current.url}
+            src={current.url}
+            alt={nombre}
+            fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-cover transition-opacity duration-150"
+            priority
+          />
         )}
       </div>
       {clean.length > 1 && (
         <div className="grid grid-cols-5 gap-2">
           {clean.map((img, idx) => (
             <button
-              key={img.id}
+              key={img.id || img.url}
               type="button"
-              onClick={() => setActive(idx)}
+              onClick={() => selectIdx(idx)}
               className={cn(
                 "aspect-square relative rounded-md overflow-hidden border-2 transition-colors",
-                idx === active ? "border-gold-primary" : "border-border hover:border-border-strong"
+                idx === activeIdx ? "border-gold-primary" : "border-border hover:border-border-strong"
               )}
             >
               {img.tipo === "video" ? (
