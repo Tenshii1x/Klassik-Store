@@ -161,7 +161,8 @@ export function ProductoVariantes({ productoId, initial }: Props) {
                         const prevPath = pathFromUrl(editDraft.imagen_url, "productos")
                         if (prevPath) await deleteFile("productos", prevPath)
                       }
-                      setEditDraft({ ...editDraft, imagen_url: newUrl })
+                      setEditDraft((prev) => ({ ...prev, imagen_url: newUrl }))
+                      e.target.value = ""
                     }}
                   />
                   {editDraft.imagen_url ? (
@@ -171,17 +172,18 @@ export function ProductoVariantes({ productoId, initial }: Props) {
                       </div>
                       <button
                         type="button"
+                        aria-label="Quitar imagen"
                         onClick={async (e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          const prev = editDraft.imagen_url
-                          setEditDraft({ ...editDraft, imagen_url: null })
-                          if (prev) {
-                            const prevPath = pathFromUrl(prev, "productos")
+                          const prevUrl = editDraft.imagen_url
+                          setEditDraft((d) => ({ ...d, imagen_url: null }))
+                          if (prevUrl) {
+                            const prevPath = pathFromUrl(prevUrl, "productos")
                             if (prevPath) await deleteFile("productos", prevPath)
                           }
                         }}
-                        className="absolute -top-1 -right-1 bg-black/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100"
+                        className="absolute -top-1 -right-1 bg-black/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 focus:opacity-100"
                       >
                         <X size={10} />
                       </button>
@@ -282,6 +284,7 @@ export function ProductoVariantes({ productoId, initial }: Props) {
                   if (prevPath) await deleteFile("productos", prevPath)
                 }
                 setNewDraftImagenUrl(newUrl)
+                e.target.value = ""
               }}
             />
             {newDraftImagenUrl ? (
