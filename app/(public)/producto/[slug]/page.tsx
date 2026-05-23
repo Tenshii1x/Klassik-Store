@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { getProductoBySlug, getProductosRelacionados, getConfiguracion } from "@/lib/catalog/queries"
-import { ProductoGaleria } from "@/components/public/ProductoGaleria"
-import { ProductoInfo } from "@/components/public/ProductoInfo"
+import { ProductoView } from "@/components/public/ProductoView"
 import { ProductosRelacionados } from "@/components/public/ProductosRelacionados"
 import { ProductSchemaData } from "@/components/public/ProductSchemaData"
 import { ChevronRight } from "lucide-react"
@@ -65,10 +64,13 @@ export default async function ProductoPage({ params }: { params: Promise<{ slug:
         <span className="text-white">{producto.nombre}</span>
       </div>
 
-      <section className="max-w-7xl mx-auto px-4 md:px-8 py-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <ProductoGaleria imagenes={imagenesOrdenadas as never} nombre={producto.nombre} />
-        <ProductoInfo p={{ ...producto, producto_variantes: variantesOrdenadas } as never} />
-      </section>
+      <ProductoView
+        producto={{
+          ...producto,
+          producto_imagenes: imagenesOrdenadas as never,
+          producto_variantes: variantesOrdenadas as never,
+        } as never}
+      />
 
       <ProductosRelacionados productos={relacionados as never} />
     </>
