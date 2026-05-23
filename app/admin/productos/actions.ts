@@ -232,8 +232,28 @@ export async function updateVariante(id: string, producto_id: string, input: Var
 
 export async function removeVariante(id: string, producto_id: string) {
   const supabase = await createSupabaseServerClient()
+
+  // Leer imagen previa para borrar el archivo después
+  const { data: existing } = await supabase
+    .from("producto_variantes")
+    .select("imagen_url")
+    .eq("id", id)
+    .single()
+
   const { error } = await supabase.from("producto_variantes").delete().eq("id", id)
   if (error) return { error: error.message }
+
+  if (existing?.imagen_url) {
+    const path = pathFromUrl(existing.imagen_url, "productos")
+    if (path) {
+      const { error: removeErr } = await supabase.storage.from("productos").remove([path])
+      if (removeErr) {
+        console.warn("[removeVariante] no se pudo borrar imagen:", path, removeErr.message)
+      }
+    }
+  }
+
   revalidatePath(`/admin/productos/${producto_id}`)
+  revalidatePath("/", "layout")
   return { success: true }
 }
