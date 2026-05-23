@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { NumberInput } from "@/components/ui/number-input"
 import { addVariante, removeVariante } from "@/app/admin/productos/actions"
 import { toast } from "sonner"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, ImageIcon } from "lucide-react"
+import Image from "next/image"
 
 interface Variante {
   id: string
@@ -14,6 +15,7 @@ interface Variante {
   valor: string
   precio_extra: number
   stock_unidades: number | null
+  imagen_url: string | null
   orden: number
 }
 
@@ -73,7 +75,18 @@ export function ProductoVariantes({ productoId, initial }: Props) {
       )}
       {initial.map((v) => (
         <div key={v.id} className="grid grid-cols-12 gap-2 items-center p-2 bg-black rounded-md border border-border">
-          <div className="col-span-3 text-sm">
+          <div className="col-span-1">
+            {v.imagen_url ? (
+              <div className="relative w-12 h-12 rounded overflow-hidden border border-border">
+                <Image src={v.imagen_url} alt="" fill className="object-cover" sizes="48px" />
+              </div>
+            ) : (
+              <div className="w-12 h-12 rounded border border-border bg-gold-deep/10 flex items-center justify-center text-gold-deep">
+                <ImageIcon size={16} />
+              </div>
+            )}
+          </div>
+          <div className="col-span-2 text-sm">
             <span className="text-muted text-xs">Tipo:</span> {v.tipo}
           </div>
           <div className="col-span-4 text-sm">
