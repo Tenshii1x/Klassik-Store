@@ -52,6 +52,8 @@ export function VariantImagenPicker({
   const imagenesSoloFoto = imagenes.filter((i) => i.tipo === "imagen")
 
   async function handleFile(file: File) {
+    if (uploading) return
+    const prev = currentUrl
     setUploading(true)
     const ext = file.name.split(".").pop() || "jpg"
     const idPart = uploadTarget === "new" ? "nueva" : uploadTarget
@@ -62,10 +64,10 @@ export function VariantImagenPicker({
       toast.error(`Error subiendo: ${error}`)
       return
     }
-    if (currentUrl && currentUrl !== url) {
-      const esDeGaleria = imagenes.some((i) => i.url === currentUrl)
+    if (prev && prev !== url) {
+      const esDeGaleria = imagenes.some((i) => i.url === prev)
       if (!esDeGaleria) {
-        const prevPath = pathFromUrl(currentUrl, "productos")
+        const prevPath = pathFromUrl(prev, "productos")
         if (prevPath) await deleteFile("productos", prevPath)
       }
     }
@@ -90,6 +92,9 @@ export function VariantImagenPicker({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-label={currentUrl ? "Cambiar imagen de variante" : "Elegir imagen de variante"}
+        aria-expanded={open}
+        aria-haspopup="dialog"
         className="block w-12 h-12 cursor-pointer relative group"
       >
         {currentUrl ? (
@@ -107,7 +112,7 @@ export function VariantImagenPicker({
           <div className="eyebrow">Elegir foto del producto</div>
           {imagenesSoloFoto.length > 0 ? (
             <div className="grid grid-cols-4 gap-2">
-              {imagenesSoloFoto.map((img) => {
+              {imagenesSoloFoto.map((img, idx) => {
                 const isCurrent = img.url === currentUrl
                 return (
                   <button
@@ -117,6 +122,7 @@ export function VariantImagenPicker({
                       onSelect(img.url)
                       setOpen(false)
                     }}
+                    aria-label={`Elegir foto ${idx + 1}${isCurrent ? " (actual)" : ""}`}
                     className={`relative aspect-square rounded overflow-hidden border-2 transition-colors ${
                       isCurrent ? "border-gold-primary" : "border-border hover:border-gold-primary/60"
                     }`}
@@ -145,7 +151,7 @@ export function VariantImagenPicker({
                   e.target.value = ""
                 }}
               />
-              <span className="flex items-center justify-center gap-2 text-sm text-gold-primary border border-gold-primary/40 rounded-md py-2 cursor-pointer hover:bg-gold-primary/10">
+              <span className={`flex items-center justify-center gap-2 text-sm text-gold-primary border border-gold-primary/40 rounded-md py-2 hover:bg-gold-primary/10 ${uploading ? "opacity-60 pointer-events-none cursor-not-allowed" : "cursor-pointer"}`}>
                 {uploading ? (
                   <span className="text-xs">Subiendo...</span>
                 ) : (
