@@ -29,6 +29,15 @@ export function CartDrawerClient({ whatsappNumber, storeName }: Props) {
   if (!mounted) return null
 
   const total = items.reduce((acc, i) => acc + i.precio * i.cantidad, 0)
+  const subtotalStock = items
+    .filter((i) => i.modo !== "preorden")
+    .reduce((acc, i) => acc + i.precio * i.cantidad, 0)
+  const subtotalPreorden = items
+    .filter((i) => i.modo === "preorden")
+    .reduce((acc, i) => acc + i.precio * i.cantidad, 0)
+  const hayMixto = subtotalStock > 0 && subtotalPreorden > 0
+  const depositoPreorden = subtotalPreorden / 2
+  const pagoAhoraEstimado = subtotalStock + depositoPreorden
 
   function handleWhatsApp() {
     if (!whatsappNumber || items.length === 0) return
@@ -60,19 +69,39 @@ export function CartDrawerClient({ whatsappNumber, storeName }: Props) {
           ) : (
             items.map((i) => (
               <CartItem
-                key={`${i.productoId}-${i.varianteId ?? ""}`}
+                key={`${i.productoId}-${i.varianteId ?? ""}-${i.modo}`}
                 productoId={i.productoId}
                 varianteId={i.varianteId}
                 nombre={i.nombre}
                 precio={i.precio}
                 imagen={i.imagen}
                 cantidad={i.cantidad}
+                modo={i.modo}
               />
             ))
           )}
         </div>
         {items.length > 0 && (
           <footer className="p-5 border-t border-border space-y-3">
+            {hayMixto && (
+              <div className="bg-black rounded-md p-3 text-xs space-y-1.5">
+                <div className="flex items-center justify-between text-white/80">
+                  <span>En stock</span>
+                  <span>{formatUSD(subtotalStock)}</span>
+                </div>
+                <div className="flex items-center justify-between text-white/80">
+                  <span>Pre-orden (total)</span>
+                  <span>{formatUSD(subtotalPreorden)}</span>
+                </div>
+                <div className="flex items-center justify-between text-info pt-1 border-t border-border/50">
+                  <span>Pago estimado hoy</span>
+                  <span className="font-semibold">{formatUSD(pagoAhoraEstimado)}</span>
+                </div>
+                <p className="text-muted text-[10px] leading-snug pt-1">
+                  Stock se paga completo. Pre-orden pide mínimo 50% ahora y 50% al recibir (~15 días).
+                </p>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="eyebrow">Total</span>
               <span className="font-serif text-2xl text-gold-primary">{formatUSD(total)}</span>

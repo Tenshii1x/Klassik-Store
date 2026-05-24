@@ -21,6 +21,7 @@ export const pedidoInputSchema = z.object({
         producto_id: z.string().uuid(),
         variante_id: z.string().uuid().optional().nullable(),
         cantidad: z.number().int().min(1).max(100),
+        modo: z.enum(["stock", "preorden"]).default("stock"),
       })
     )
     .min(1, "Carrito vacío"),

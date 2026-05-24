@@ -68,21 +68,48 @@ export function ProductoInfo({
   const selectedVariant = p.producto_variantes.find((v) => v.id === selectedVariantId)
   const precioFinal = p.precio_venta + (selectedVariant?.precio_extra ?? 0)
   const isStock = p.modo === "stock"
-  const agotado =
-    (isStock && (p.stock_unidades ?? 0) === 0) ||
-    (selectedVariant && selectedVariant.stock_unidades !== null && selectedVariant.stock_unidades === 0)
+  const stockEfectivo =
+    selectedVariant && selectedVariant.stock_unidades !== null
+      ? selectedVariant.stock_unidades
+      : isStock
+      ? p.stock_unidades ?? 0
+      : 0
+  const sinStock = isStock && stockEfectivo === 0
+  const excedeStock = isStock && cantidad > stockEfectivo
   const fechaRango = formatRange(p.fecha_llegada_inicio, p.fecha_llegada_fin)
 
   function handleAdd() {
-    add({
+    const nombreBase = selectedVariant ? `${p.nombre} (${selectedVariant.valor})` : p.nombre
+    const imagen = p.producto_imagenes[0]?.url ?? null
+    const baseItem = {
       productoId: p.id,
       varianteId: selectedVariant?.id ?? null,
-      nombre: selectedVariant ? `${p.nombre} (${selectedVariant.valor})` : p.nombre,
       precio: precioFinal,
-      imagen: p.producto_imagenes[0]?.url ?? null,
-      cantidad,
-      modo: p.modo,
-    })
+      imagen,
+    }
+
+    if (!isStock || sinStock) {
+      // Modo preorden puro (producto preorden, o stock con 0 unidades)
+      add({ ...baseItem, nombre: nombreBase, cantidad, modo: "preorden" })
+      toast.success(sinStock ? "Agregado como pre-orden" : "Agregado al carrito")
+      setOpen(true)
+      return
+    }
+
+    if (excedeStock) {
+      // Split: lo que hay como stock + el resto como pre-orden
+      const stockQty = stockEfectivo
+      const preordenQty = cantidad - stockEfectivo
+      if (stockQty > 0) {
+        add({ ...baseItem, nombre: nombreBase, cantidad: stockQty, modo: "stock" })
+      }
+      add({ ...baseItem, nombre: nombreBase, cantidad: preordenQty, modo: "preorden" })
+      toast.success(`${stockQty} en stock + ${preordenQty} como pre-orden`)
+      setOpen(true)
+      return
+    }
+
+    add({ ...baseItem, nombre: nombreBase, cantidad, modo: "stock" })
     toast.success("Agregado al carrito")
     setOpen(true)
   }
@@ -91,10 +118,12 @@ export function ProductoInfo({
     <div className="space-y-6">
       <div>
         <div className="flex items-center gap-2 mb-2">
-          {agotado ? (
-            <Badge tone="danger">Agotado</Badge>
+          {sinStock ? (
+            <Badge tone="info">Pre-orden · llega en ~15 días</Badge>
           ) : isStock ? (
-            <Badge tone="gold">Entrega inmediata · 2-3 días</Badge>
+            <Badge tone="gold">
+              Entrega inmediata · {stockEfectivo} {stockEfectivo === 1 ? "disponible" : "disponibles"}
+            </Badge>
           ) : (
             <Badge tone="info">Pre-orden{fechaRango ? ` · llega entre ${fechaRango}` : ""}</Badge>
           )}
@@ -148,19 +177,37 @@ export function ProductoInfo({
         </div>
       )}
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center border border-border rounded-md">
-          <button type="button" onClick={() => setCantidad(Math.max(1, cantidad - 1))} className="px-3 py-2 text-white hover:text-gold-primary">
-            <Minus size={14} />
-          </button>
-          <span className="px-4 font-semibold">{cantidad}</span>
-          <button type="button" onClick={() => setCantidad(cantidad + 1)} className="px-3 py-2 text-white hover:text-gold-primary">
-            <Plus size={14} />
-          </button>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center border border-border rounded-md">
+            <button type="button" onClick={() => setCantidad(Math.max(1, cantidad - 1))} className="px-3 py-2 text-white hover:text-gold-primary">
+              <Minus size={14} />
+            </button>
+            <span className="px-4 font-semibold">{cantidad}</span>
+            <button type="button" onClick={() => setCantidad(cantidad + 1)} className="px-3 py-2 text-white hover:text-gold-primary">
+              <Plus size={14} />
+            </button>
+          </div>
+          <Button type="button" size="lg" className="flex-1" onClick={handleAdd}>
+            {sinStock
+              ? "Pedir como pre-orden"
+              : excedeStock
+              ? `Agregar (${stockEfectivo} stock + ${cantidad - stockEfectivo} pre-orden)`
+              : "Agregar al carrito"}
+          </Button>
         </div>
-        <Button type="button" size="lg" className="flex-1" onClick={handleAdd} disabled={!!agotado}>
-          {agotado ? "Agotado" : "Agregar al carrito"}
-        </Button>
+        {(sinStock || excedeStock) && (
+          <div className="bg-info/5 border border-info/30 rounded-md p-3 text-xs text-white/85 leading-relaxed">
+            <p className="font-semibold text-info mb-1">
+              {sinStock ? "Sin stock por ahora — disponible bajo pre-orden" : "Más unidades que las disponibles"}
+            </p>
+            <p>
+              {sinStock
+                ? "Lo pedimos especialmente para ti. Pagas 50% ahora y 50% al recibir. Llega en aproximadamente 15 días (puede variar)."
+                : `Hay ${stockEfectivo} ${stockEfectivo === 1 ? "unidad disponible" : "unidades disponibles"} para entrega inmediata. Las otras ${cantidad - stockEfectivo} se piden como pre-orden — 50% ahora, 50% al recibir, ~15 días.`}
+            </p>
+          </div>
+        )}
       </div>
 
       {p.descripcion && (

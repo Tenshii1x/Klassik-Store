@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 
 const STORAGE_KEY = "klassik_cart_v1"
 
-interface CartItem {
+export interface CartItem {
   productoId: string
   varianteId?: string | null
   nombre: string
@@ -19,15 +19,22 @@ interface CartContextValue {
   open: boolean
   setOpen: (v: boolean) => void
   add: (item: CartItem) => void
-  remove: (productoId: string, varianteId?: string | null) => void
-  setCantidad: (productoId: string, cantidad: number, varianteId?: string | null) => void
+  remove: (productoId: string, varianteId?: string | null, modo?: string) => void
+  setCantidad: (productoId: string, cantidad: number, varianteId?: string | null, modo?: string) => void
   clear: () => void
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
 
-function sameItem(a: CartItem, b: { productoId: string; varianteId?: string | null }) {
-  return a.productoId === b.productoId && (a.varianteId ?? null) === (b.varianteId ?? null)
+function sameItem(
+  a: CartItem,
+  b: { productoId: string; varianteId?: string | null; modo?: string }
+) {
+  return (
+    a.productoId === b.productoId &&
+    (a.varianteId ?? null) === (b.varianteId ?? null) &&
+    (b.modo === undefined || a.modo === b.modo)
+  )
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -49,24 +56,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   function add(item: CartItem) {
     setItems((prev) => {
-      const existing = prev.find((p) => sameItem(p, item))
+      const match = { productoId: item.productoId, varianteId: item.varianteId, modo: item.modo }
+      const existing = prev.find((p) => sameItem(p, match))
       if (existing) {
-        return prev.map((p) => (sameItem(p, item) ? { ...p, cantidad: p.cantidad + item.cantidad } : p))
+        return prev.map((p) => (sameItem(p, match) ? { ...p, cantidad: p.cantidad + item.cantidad } : p))
       }
       return [...prev, item]
     })
   }
 
-  function remove(productoId: string, varianteId?: string | null) {
-    setItems((prev) => prev.filter((p) => !sameItem(p, { productoId, varianteId })))
+  function remove(productoId: string, varianteId?: string | null, modo?: string) {
+    setItems((prev) => prev.filter((p) => !sameItem(p, { productoId, varianteId, modo })))
   }
 
-  function setCantidad(productoId: string, cantidad: number, varianteId?: string | null) {
+  function setCantidad(productoId: string, cantidad: number, varianteId?: string | null, modo?: string) {
     if (cantidad <= 0) {
-      remove(productoId, varianteId)
+      remove(productoId, varianteId, modo)
       return
     }
-    setItems((prev) => prev.map((p) => (sameItem(p, { productoId, varianteId }) ? { ...p, cantidad } : p)))
+    setItems((prev) => prev.map((p) => (sameItem(p, { productoId, varianteId, modo }) ? { ...p, cantidad } : p)))
   }
 
   function clear() {

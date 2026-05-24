@@ -52,21 +52,46 @@ export async function crearPedido(input: PedidoInput) {
     if (vs) variantes = new Map(vs.map((v) => [v.id, v.precio_extra]))
   }
 
+  // Suma de unidades stock por producto para validar contra stock_unidades.
+  const stockSolicitadoPorProducto = new Map<string, number>()
+  for (const item of data.items) {
+    if (item.modo === "stock") {
+      stockSolicitadoPorProducto.set(
+        item.producto_id,
+        (stockSolicitadoPorProducto.get(item.producto_id) || 0) + item.cantidad
+      )
+    }
+  }
+  for (const [productoId, qty] of stockSolicitadoPorProducto) {
+    const p = productoMap.get(productoId)
+    if (!p) continue
+    if (p.modo !== "stock") {
+      return { error: `El producto "${p.nombre}" no se vende como stock` }
+    }
+    if ((p.stock_unidades ?? 0) < qty) {
+      return {
+        error: `Solo quedan ${p.stock_unidades ?? 0} de "${p.nombre}" en stock. Ajusta el carrito.`,
+      }
+    }
+  }
+
   for (const item of data.items) {
     const p = productoMap.get(item.producto_id)
     if (!p) continue
     const precioExtra = item.variante_id ? variantes.get(item.variante_id) || 0 : 0
     const precio = p.precio_venta + precioExtra
     total += precio * item.cantidad
-    if (p.modo === "stock") tieneStock = true
-    if (p.modo === "preorden") tienePreorden = true
+    // El cliente decide modo por línea — pero un producto preorden puro nunca puede ser "stock".
+    const modoEfectivo = p.modo === "preorden" ? "preorden" : item.modo
+    if (modoEfectivo === "stock") tieneStock = true
+    if (modoEfectivo === "preorden") tienePreorden = true
     itemsToInsert.push({
       producto_id: p.id,
       variante_id: item.variante_id || null,
       nombre_snapshot: p.nombre,
       precio_snapshot: precio,
       cantidad: item.cantidad,
-      modo: p.modo,
+      modo: modoEfectivo,
     })
   }
 

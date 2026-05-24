@@ -80,6 +80,7 @@ export function CheckoutForm({ config }: Props) {
           producto_id: i.productoId,
           variante_id: i.varianteId,
           cantidad: i.cantidad,
+          modo: i.modo === "preorden" ? "preorden" : "stock",
         })),
       })
       if (result?.error) {

@@ -36,7 +36,7 @@ export function ProductoCard({ p }: { p: ProductoCardData }) {
   const portadaVisible = primeraFoto ?? limpias[0] ?? null
   const portadaEsSoloVideo = !primeraFoto && portadaVisible?.tipo === "video"
   const isStock = p.modo === "stock"
-  const agotado = isStock && (p.stock_unidades ?? 0) === 0
+  const sinStock = isStock && (p.stock_unidades ?? 0) === 0
   const fechaRango = formatRange(p.fecha_llegada_inicio, p.fecha_llegada_fin)
 
   return (
@@ -67,11 +67,7 @@ export function ProductoCard({ p }: { p: ProductoCardData }) {
         )}
         <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
         <div className="absolute top-3 left-3 z-10">
-          {agotado ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.65rem] font-bold uppercase tracking-wider bg-danger text-white shadow-lg ring-1 ring-white/10">
-              Agotado
-            </span>
-          ) : isStock ? (
+          {isStock && !sinStock ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.65rem] font-bold uppercase tracking-wider bg-gold-primary text-black shadow-lg ring-1 ring-black/20">
               Entrega inmediata
             </span>
