@@ -63,7 +63,7 @@ export function ProductoInfo({
     p.producto_variantes[0]?.id ?? null
   )
   const [cantidad, setCantidad] = useState(1)
-  const { add, setOpen } = useCart()
+  const { items, add, setOpen } = useCart()
 
   const selectedVariant = p.producto_variantes.find((v) => v.id === selectedVariantId)
   const precioFinal = p.precio_venta + (selectedVariant?.precio_extra ?? 0)
@@ -74,8 +74,18 @@ export function ProductoInfo({
       : isStock
       ? p.stock_unidades ?? 0
       : 0
-  const sinStock = isStock && stockEfectivo === 0
-  const excedeStock = isStock && cantidad > stockEfectivo
+  const stockEnCarrito = items
+    .filter(
+      (i) =>
+        i.productoId === p.id &&
+        (i.varianteId ?? null) === (selectedVariant?.id ?? null) &&
+        i.modo === "stock"
+    )
+    .reduce((acc, i) => acc + i.cantidad, 0)
+  const stockDisponible = Math.max(0, stockEfectivo - stockEnCarrito)
+  const productoAgotado = isStock && stockEfectivo === 0
+  const sinStockDisponible = isStock && stockDisponible === 0
+  const excedeStock = isStock && cantidad > stockDisponible
   const fechaRango = formatRange(p.fecha_llegada_inicio, p.fecha_llegada_fin)
 
   function handleAdd() {
@@ -92,18 +102,18 @@ export function ProductoInfo({
       imagen,
     }
 
-    if (!isStock || sinStock) {
-      // Modo preorden puro (producto preorden, o stock con 0 unidades)
+    if (!isStock || sinStockDisponible) {
+      // Producto preorden puro, o ya no queda stock disponible (agotado global o todo en carrito)
       add({ ...baseItem, nombre: nombreBase, cantidad, modo: "preorden" })
-      toast.success(sinStock ? "Agregado como pre-orden" : "Agregado al carrito")
+      toast.success(productoAgotado ? "Agregado como pre-orden" : "Agregado como pre-orden (stock ya en tu carrito)")
       setOpen(true)
       return
     }
 
     if (excedeStock) {
-      // Split: lo que hay como stock + el resto como pre-orden
-      const stockQty = stockEfectivo
-      const preordenQty = cantidad - stockEfectivo
+      // Split: lo que queda disponible como stock + el resto como pre-orden
+      const stockQty = stockDisponible
+      const preordenQty = cantidad - stockDisponible
       if (stockQty > 0) {
         add({ ...baseItem, nombre: nombreBase, cantidad: stockQty, modo: "stock" })
       }
@@ -122,11 +132,11 @@ export function ProductoInfo({
     <div className="space-y-6">
       <div>
         <div className="flex items-center gap-2 mb-2">
-          {sinStock ? (
+          {sinStockDisponible ? (
             <Badge tone="info">Pre-orden · llega en ~15 días</Badge>
           ) : isStock ? (
             <Badge tone="gold">
-              Entrega inmediata · {stockEfectivo} {stockEfectivo === 1 ? "disponible" : "disponibles"}
+              Entrega inmediata · {stockDisponible} {stockDisponible === 1 ? "disponible" : "disponibles"}
             </Badge>
           ) : (
             <Badge tone="info">Pre-orden{fechaRango ? ` · llega entre ${fechaRango}` : ""}</Badge>
@@ -193,22 +203,28 @@ export function ProductoInfo({
             </button>
           </div>
           <Button type="button" size="lg" className="flex-1" onClick={handleAdd}>
-            {sinStock
+            {sinStockDisponible
               ? "Pedir como pre-orden"
               : excedeStock
-              ? `Agregar (${stockEfectivo} stock + ${cantidad - stockEfectivo} pre-orden)`
+              ? `Agregar (${stockDisponible} stock + ${cantidad - stockDisponible} pre-orden)`
               : "Agregar al carrito"}
           </Button>
         </div>
-        {(sinStock || excedeStock) && (
+        {(sinStockDisponible || excedeStock) && (
           <div className="bg-info/5 border border-info/30 rounded-md p-3 text-xs text-white/85 leading-relaxed">
             <p className="font-semibold text-info mb-1">
-              {sinStock ? "Sin stock por ahora — disponible bajo pre-orden" : "Más unidades que las disponibles"}
+              {productoAgotado
+                ? "Sin stock por ahora — disponible bajo pre-orden"
+                : sinStockDisponible
+                ? "Ya tienes todo el stock en tu carrito"
+                : "Más unidades que las disponibles"}
             </p>
             <p>
-              {sinStock
+              {productoAgotado
                 ? "Lo pedimos especialmente para ti. Pagas 50% ahora y 50% al recibir. Llega en aproximadamente 15 días (puede variar)."
-                : `Hay ${stockEfectivo} ${stockEfectivo === 1 ? "unidad disponible" : "unidades disponibles"} para entrega inmediata. Las otras ${cantidad - stockEfectivo} se piden como pre-orden — 50% ahora, 50% al recibir, ~15 días.`}
+                : sinStockDisponible
+                ? `Tu carrito ya tiene las ${stockEnCarrito} ${stockEnCarrito === 1 ? "unidad disponible" : "unidades disponibles"}. Las adicionales se piden como pre-orden — 50% ahora, 50% al recibir, ~15 días.`
+                : `Quedan ${stockDisponible} ${stockDisponible === 1 ? "unidad disponible" : "unidades disponibles"} para entrega inmediata. Las otras ${cantidad - stockDisponible} se piden como pre-orden — 50% ahora, 50% al recibir, ~15 días.`}
             </p>
           </div>
         )}
