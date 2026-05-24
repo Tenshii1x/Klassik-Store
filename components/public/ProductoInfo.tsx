@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatUSD } from "@/lib/utils"
@@ -64,12 +64,6 @@ export function ProductoInfo({
   )
   const [cantidad, setCantidad] = useState(1)
   const { add, setOpen } = useCart()
-
-  useEffect(() => {
-    const initial = p.producto_variantes.find((v) => v.id === selectedVariantId) ?? null
-    onVariantChange?.(initial)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const selectedVariant = p.producto_variantes.find((v) => v.id === selectedVariantId)
   const precioFinal = p.precio_venta + (selectedVariant?.precio_extra ?? 0)
