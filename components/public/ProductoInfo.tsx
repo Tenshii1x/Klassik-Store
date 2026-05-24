@@ -82,7 +82,9 @@ export function ProductoInfo({
     const nombreBase = selectedVariant ? `${p.nombre} (${selectedVariant.valor})` : p.nombre
     const primeraFoto =
       p.producto_imagenes.find((i) => i.tipo !== "video") ?? p.producto_imagenes[0] ?? null
-    const imagen = primeraFoto && primeraFoto.tipo !== "video" ? primeraFoto.url : null
+    const fallbackImagen =
+      primeraFoto && primeraFoto.tipo !== "video" ? primeraFoto.url : null
+    const imagen = selectedVariant?.imagen_url ?? fallbackImagen
     const baseItem = {
       productoId: p.id,
       varianteId: selectedVariant?.id ?? null,
