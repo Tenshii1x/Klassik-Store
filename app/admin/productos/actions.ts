@@ -6,6 +6,33 @@ import { productoSchema, varianteSchema, type ProductoInput, type VarianteInput 
 import { redirect } from "next/navigation"
 import { pathFromUrl } from "@/lib/storage/upload"
 
+async function tryDeleteVariantImage(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  producto_id: string,
+  url: string | null
+): Promise<void> {
+  if (!url) return
+
+  const { data: galeriaRef } = await supabase
+    .from("producto_imagenes")
+    .select("id")
+    .eq("producto_id", producto_id)
+    .eq("url", url)
+    .maybeSingle()
+
+  if (galeriaRef) {
+    return
+  }
+
+  const path = pathFromUrl(url, "productos")
+  if (!path) return
+
+  const { error: removeErr } = await supabase.storage.from("productos").remove([path])
+  if (removeErr) {
+    console.warn("[tryDeleteVariantImage] no se pudo borrar imagen:", path, removeErr.message)
+  }
+}
+
 export async function bulkPublish(ids: string[]) {
   if (ids.length === 0) return { error: "Sin selección" }
   const supabase = await createSupabaseServerClient()
