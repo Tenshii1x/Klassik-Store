@@ -51,6 +51,40 @@ export function VariantImagenPicker({
 
   const imagenesSoloFoto = imagenes.filter((i) => i.tipo === "imagen")
 
+  async function handleFile(file: File) {
+    setUploading(true)
+    const ext = file.name.split(".").pop() || "jpg"
+    const idPart = uploadTarget === "new" ? "nueva" : uploadTarget
+    const path = `productos/${productoId}/variantes/${idPart}-${Date.now()}.${ext}`
+    const { url, error } = await uploadFile("productos", path, file)
+    setUploading(false)
+    if (error) {
+      toast.error(`Error subiendo: ${error}`)
+      return
+    }
+    if (currentUrl && currentUrl !== url) {
+      const esDeGaleria = imagenes.some((i) => i.url === currentUrl)
+      if (!esDeGaleria) {
+        const prevPath = pathFromUrl(currentUrl, "productos")
+        if (prevPath) await deleteFile("productos", prevPath)
+      }
+    }
+    onSelect(url)
+    setOpen(false)
+  }
+
+  async function handleRemove() {
+    if (currentUrl) {
+      const esDeGaleria = imagenes.some((i) => i.url === currentUrl)
+      if (!esDeGaleria) {
+        const prevPath = pathFromUrl(currentUrl, "productos")
+        if (prevPath) await deleteFile("productos", prevPath)
+      }
+    }
+    onSelect(null)
+    setOpen(false)
+  }
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -96,6 +130,41 @@ export function VariantImagenPicker({
             <div className="text-muted text-xs italic">
               Sin fotos en la galería del producto. Sube primero las fotos generales o usa &ldquo;Subir foto nueva&rdquo; abajo.
             </div>
+          )}
+          <div className="border-t border-border pt-3">
+            <label className="block">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  await handleFile(file)
+                  e.target.value = ""
+                }}
+              />
+              <span className="flex items-center justify-center gap-2 text-sm text-gold-primary border border-gold-primary/40 rounded-md py-2 cursor-pointer hover:bg-gold-primary/10">
+                {uploading ? (
+                  <span className="text-xs">Subiendo...</span>
+                ) : (
+                  <>
+                    <Upload size={14} />
+                    Subir foto nueva
+                  </>
+                )}
+              </span>
+            </label>
+          </div>
+          {currentUrl && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="w-full text-xs text-danger hover:underline flex items-center justify-center gap-1"
+            >
+              <X size={12} /> Quitar imagen
+            </button>
           )}
         </div>
       )}
