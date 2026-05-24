@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function CartDrawerClient({ whatsappNumber, storeName }: Props) {
-  const { items, open, setOpen, clear } = useCart()
+  const { items, open, setOpen, clear, pagarCompletoPreorden, setPagarCompletoPreorden } = useCart()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
@@ -28,16 +28,17 @@ export function CartDrawerClient({ whatsappNumber, storeName }: Props) {
 
   if (!mounted) return null
 
-  const total = items.reduce((acc, i) => acc + i.precio * i.cantidad, 0)
+  const totalPedido = items.reduce((acc, i) => acc + i.precio * i.cantidad, 0)
   const subtotalStock = items
     .filter((i) => i.modo !== "preorden")
     .reduce((acc, i) => acc + i.precio * i.cantidad, 0)
   const subtotalPreorden = items
     .filter((i) => i.modo === "preorden")
     .reduce((acc, i) => acc + i.precio * i.cantidad, 0)
-  const hayMixto = subtotalStock > 0 && subtotalPreorden > 0
-  const depositoPreorden = subtotalPreorden / 2
-  const pagoAhoraEstimado = subtotalStock + depositoPreorden
+  const hayPreorden = subtotalPreorden > 0
+  const depositoPreorden = pagarCompletoPreorden ? subtotalPreorden : subtotalPreorden / 2
+  const pagoHoy = subtotalStock + depositoPreorden
+  const pagoAlRecibir = totalPedido - pagoHoy
 
   function handleWhatsApp() {
     if (!whatsappNumber || items.length === 0) return
@@ -83,28 +84,49 @@ export function CartDrawerClient({ whatsappNumber, storeName }: Props) {
         </div>
         {items.length > 0 && (
           <footer className="p-5 border-t border-border space-y-3">
-            {hayMixto && (
-              <div className="bg-black rounded-md p-3 text-xs space-y-1.5">
+            {hayPreorden && (
+              <div className="bg-black rounded-md p-3 text-xs space-y-2">
+                {subtotalStock > 0 && (
+                  <div className="flex items-center justify-between text-white/80">
+                    <span>En stock</span>
+                    <span>{formatUSD(subtotalStock)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-white/80">
-                  <span>En stock</span>
-                  <span>{formatUSD(subtotalStock)}</span>
-                </div>
-                <div className="flex items-center justify-between text-white/80">
-                  <span>Pre-orden (total)</span>
+                  <span>Pre-orden</span>
                   <span>{formatUSD(subtotalPreorden)}</span>
                 </div>
-                <div className="flex items-center justify-between text-info pt-1 border-t border-border/50">
-                  <span>Pago estimado hoy</span>
-                  <span className="font-semibold">{formatUSD(pagoAhoraEstimado)}</span>
-                </div>
-                <p className="text-muted text-[10px] leading-snug pt-1">
-                  Stock se paga completo. Pre-orden pide mínimo 50% ahora y 50% al recibir (~15 días).
-                </p>
+                <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pagarCompletoPreorden}
+                    onChange={(e) => setPagarCompletoPreorden(e.target.checked)}
+                    className="accent-gold-primary mt-0.5"
+                  />
+                  <span className="text-white/85 leading-snug">
+                    Pagar pre-orden 100% ahora
+                    <span className="text-muted block text-[10px]">
+                      Por defecto se paga 50% ahora y 50% al recibir (~15 días).
+                    </span>
+                  </span>
+                </label>
               </div>
             )}
-            <div className="flex items-center justify-between">
-              <span className="eyebrow">Total</span>
-              <span className="font-serif text-2xl text-gold-primary">{formatUSD(total)}</span>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="eyebrow">Pago hoy</span>
+                <span className="font-serif text-2xl text-gold-primary">{formatUSD(pagoHoy)}</span>
+              </div>
+              {pagoAlRecibir > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Pago al recibir pre-orden</span>
+                  <span className="text-info">{formatUSD(pagoAlRecibir)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                <span className="text-muted">Total del pedido</span>
+                <span className="text-white/70">{formatUSD(totalPedido)}</span>
+              </div>
             </div>
             <Link href="/checkout" onClick={() => setOpen(false)} className="block">
               <Button type="button" size="lg" className="w-full">

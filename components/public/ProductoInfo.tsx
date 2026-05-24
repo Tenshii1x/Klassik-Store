@@ -31,7 +31,7 @@ interface Producto {
   fecha_llegada_inicio: string | null
   fecha_llegada_fin: string | null
   producto_variantes: Variante[]
-  producto_imagenes: { url: string }[]
+  producto_imagenes: { url: string; tipo?: string }[]
 }
 
 function parseLocalDate(s: string): Date {
@@ -80,7 +80,9 @@ export function ProductoInfo({
 
   function handleAdd() {
     const nombreBase = selectedVariant ? `${p.nombre} (${selectedVariant.valor})` : p.nombre
-    const imagen = p.producto_imagenes[0]?.url ?? null
+    const primeraFoto =
+      p.producto_imagenes.find((i) => i.tipo !== "video") ?? p.producto_imagenes[0] ?? null
+    const imagen = primeraFoto && primeraFoto.tipo !== "video" ? primeraFoto.url : null
     const baseItem = {
       productoId: p.id,
       varianteId: selectedVariant?.id ?? null,
