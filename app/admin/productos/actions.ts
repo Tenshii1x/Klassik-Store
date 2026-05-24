@@ -243,13 +243,7 @@ export async function updateVariante(id: string, producto_id: string, input: Var
   const previa = existing?.imagen_url ?? null
   const nueva = parsed.data.imagen_url ?? null
   if (previa && previa !== nueva) {
-    const path = pathFromUrl(previa, "productos")
-    if (path) {
-      const { error: removeErr } = await supabase.storage.from("productos").remove([path])
-      if (removeErr) {
-        console.warn("[updateVariante] no se pudo borrar imagen anterior:", path, removeErr.message)
-      }
-    }
+    await tryDeleteVariantImage(supabase, producto_id, previa)
   }
 
   revalidatePath(`/admin/productos/${producto_id}`)
@@ -270,15 +264,7 @@ export async function removeVariante(id: string, producto_id: string) {
   const { error } = await supabase.from("producto_variantes").delete().eq("id", id)
   if (error) return { error: error.message }
 
-  if (existing?.imagen_url) {
-    const path = pathFromUrl(existing.imagen_url, "productos")
-    if (path) {
-      const { error: removeErr } = await supabase.storage.from("productos").remove([path])
-      if (removeErr) {
-        console.warn("[removeVariante] no se pudo borrar imagen:", path, removeErr.message)
-      }
-    }
-  }
+  await tryDeleteVariantImage(supabase, producto_id, existing?.imagen_url ?? null)
 
   revalidatePath(`/admin/productos/${producto_id}`)
   revalidatePath("/", "layout")
