@@ -31,6 +31,24 @@ export function VariantImagenPicker({
   const [uploading, setUploading] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    if (!open) return
+    function onClick(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", onClick)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onClick)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -48,6 +66,12 @@ export function VariantImagenPicker({
           </div>
         )}
       </button>
+      {open && (
+        <div className="absolute left-0 top-14 z-50 w-72 bg-black border border-border-strong rounded-md shadow-deep p-3 space-y-3">
+          <div className="eyebrow">Elegir foto</div>
+          <div className="text-muted text-xs">Popover funcional — contenido en próximos pasos.</div>
+        </div>
+      )}
     </div>
   )
 }
