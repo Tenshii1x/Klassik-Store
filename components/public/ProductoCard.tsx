@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { formatUSD } from "@/lib/utils"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Play } from "lucide-react"
 import { WishlistButton } from "@/components/wishlist/WishlistButton"
 
 interface ProductoCardData {
@@ -31,8 +31,10 @@ function formatRange(inicio: string | null | undefined, fin: string | null | und
 
 export function ProductoCard({ p }: { p: ProductoCardData }) {
   const limpias = p.producto_imagenes.filter((i) => i.watermark_limpio)
-  const portada = limpias[0]
-  const portadaEsVideo = portada?.tipo === "video"
+  const primeraFoto = limpias.find((i) => i.tipo !== "video")
+  const tieneVideo = limpias.some((i) => i.tipo === "video")
+  const portadaVisible = primeraFoto ?? limpias[0] ?? null
+  const portadaEsSoloVideo = !primeraFoto && portadaVisible?.tipo === "video"
   const isStock = p.modo === "stock"
   const agotado = isStock && (p.stock_unidades ?? 0) === 0
   const fechaRango = formatRange(p.fecha_llegada_inicio, p.fecha_llegada_fin)
@@ -43,21 +45,19 @@ export function ProductoCard({ p }: { p: ProductoCardData }) {
       className="group block bg-black-surface border border-border rounded-md overflow-hidden hover:border-gold-primary/50 hover:shadow-deep transition-all"
     >
       <div className="aspect-square relative bg-gradient-to-br from-gold-deep/30 to-black overflow-hidden">
-        {portada && (
-          portadaEsVideo ? (
+        {portadaVisible && (
+          portadaEsSoloVideo ? (
             <video
-              src={portada.url}
+              src={portadaVisible.url}
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              autoPlay
               muted
-              loop
               playsInline
               preload="metadata"
               aria-label={p.nombre}
             />
           ) : (
             <Image
-              src={portada.url}
+              src={portadaVisible.url}
               alt={p.nombre}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 300px"
@@ -82,6 +82,14 @@ export function ProductoCard({ p }: { p: ProductoCardData }) {
           )}
         </div>
         <WishlistButton productoId={p.id} className="absolute top-3 right-3 z-10" />
+        {tieneVideo && (
+          <div
+            aria-hidden="true"
+            className="absolute bottom-3 left-3 z-10 w-8 h-8 rounded-full bg-black/70 backdrop-blur-sm ring-1 ring-white/20 flex items-center justify-center"
+          >
+            <Play size={14} className="text-white fill-white ml-0.5" />
+          </div>
+        )}
       </div>
       <div className="p-5 space-y-2">
         <h3 className="font-serif text-xl text-white leading-tight">{p.nombre}</h3>
