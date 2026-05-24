@@ -13,6 +13,8 @@ export interface CartItem {
   imagen: string | null
   cantidad: number
   modo: string
+  /** Stock máximo conocido del producto (snapshot al agregar). Solo aplica si modo === "stock". */
+  stockMax?: number
 }
 
 interface CartContextValue {

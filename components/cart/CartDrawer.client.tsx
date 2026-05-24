@@ -78,6 +78,7 @@ export function CartDrawerClient({ whatsappNumber, storeName }: Props) {
                 imagen={i.imagen}
                 cantidad={i.cantidad}
                 modo={i.modo}
+                stockMax={i.stockMax}
               />
             ))
           )}

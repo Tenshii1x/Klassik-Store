@@ -4,6 +4,7 @@ import Image from "next/image"
 import { Plus, Minus, X } from "lucide-react"
 import { formatUSD } from "@/lib/utils"
 import { useCart } from "./CartProvider"
+import { toast } from "sonner"
 
 interface Props {
   productoId: string
@@ -13,11 +14,35 @@ interface Props {
   imagen: string | null
   cantidad: number
   modo: string
+  stockMax?: number
 }
 
-export function CartItem({ productoId, varianteId, nombre, precio, imagen, cantidad, modo }: Props) {
-  const { setCantidad, remove } = useCart()
+export function CartItem({ productoId, varianteId, nombre, precio, imagen, cantidad, modo, stockMax }: Props) {
+  const { add, setCantidad, remove } = useCart()
   const esPreorden = modo === "preorden"
+
+  function handleIncrement() {
+    if (esPreorden) {
+      setCantidad(productoId, cantidad + 1, varianteId, modo)
+      return
+    }
+    // Modo stock: respetar stockMax si lo conocemos
+    if (stockMax === undefined || cantidad < stockMax) {
+      setCantidad(productoId, cantidad + 1, varianteId, modo)
+      return
+    }
+    // Llegamos al límite de stock — la unidad extra se agrega como pre-orden
+    add({
+      productoId,
+      varianteId,
+      nombre,
+      precio,
+      imagen,
+      cantidad: 1,
+      modo: "preorden",
+    })
+    toast.info("Sin más stock disponible. La unidad extra se agregó como pre-orden.")
+  }
   return (
     <div className="flex gap-3 py-3 border-b border-border">
       <div className="relative w-16 h-16 rounded-md overflow-hidden bg-black flex-shrink-0">
@@ -40,7 +65,7 @@ export function CartItem({ productoId, varianteId, nombre, precio, imagen, canti
             <Minus size={12} />
           </button>
           <span className="text-white text-sm w-6 text-center">{cantidad}</span>
-          <button type="button" onClick={() => setCantidad(productoId, cantidad + 1, varianteId, modo)} className="w-7 h-7 rounded border border-border text-white hover:text-gold-primary flex items-center justify-center">
+          <button type="button" onClick={handleIncrement} className="w-7 h-7 rounded border border-border text-white hover:text-gold-primary flex items-center justify-center">
             <Plus size={12} />
           </button>
         </div>

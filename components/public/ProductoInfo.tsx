@@ -115,7 +115,7 @@ export function ProductoInfo({
       const stockQty = stockDisponible
       const preordenQty = cantidad - stockDisponible
       if (stockQty > 0) {
-        add({ ...baseItem, nombre: nombreBase, cantidad: stockQty, modo: "stock" })
+        add({ ...baseItem, nombre: nombreBase, cantidad: stockQty, modo: "stock", stockMax: stockEfectivo })
       }
       add({ ...baseItem, nombre: nombreBase, cantidad: preordenQty, modo: "preorden" })
       toast.success(`${stockQty} en stock + ${preordenQty} como pre-orden`)
@@ -123,7 +123,7 @@ export function ProductoInfo({
       return
     }
 
-    add({ ...baseItem, nombre: nombreBase, cantidad, modo: "stock" })
+    add({ ...baseItem, nombre: nombreBase, cantidad, modo: "stock", stockMax: stockEfectivo })
     toast.success("Agregado al carrito")
     setOpen(true)
   }
