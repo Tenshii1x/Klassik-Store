@@ -1,7 +1,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { formatUSD } from "@/lib/utils"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Play } from "lucide-react"
 import { WishlistButton } from "@/components/wishlist/WishlistButton"
 
 interface ProductoCardData {
@@ -82,6 +82,14 @@ export function ProductoCard({ p }: { p: ProductoCardData }) {
           )}
         </div>
         <WishlistButton productoId={p.id} className="absolute top-3 right-3 z-10" />
+        {tieneVideo && (
+          <div
+            aria-hidden="true"
+            className="absolute bottom-3 left-3 z-10 w-8 h-8 rounded-full bg-black/70 backdrop-blur-sm ring-1 ring-white/20 flex items-center justify-center"
+          >
+            <Play size={14} className="text-white fill-white ml-0.5" />
+          </div>
+        )}
       </div>
       <div className="p-5 space-y-2">
         <h3 className="font-serif text-xl text-white leading-tight">{p.nombre}</h3>
