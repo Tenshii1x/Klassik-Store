@@ -31,6 +31,7 @@ export async function getProductosBySeccion(
   seccionId: string,
   filters: {
     subseccion?: string
+    marca?: string
     modo?: string
     sort?: string
     precio_min?: number
@@ -47,6 +48,7 @@ export async function getProductosBySeccion(
     .eq("seccion_id", seccionId)
 
   if (filters.subseccion) query = query.eq("subseccion_id", filters.subseccion)
+  if (filters.marca) query = query.ilike("marca", filters.marca)
   if (filters.modo) query = query.eq("modo", filters.modo)
   if (filters.precio_min) query = query.gte("precio_venta", filters.precio_min)
   if (filters.precio_max) query = query.lte("precio_venta", filters.precio_max)
@@ -79,6 +81,21 @@ export async function getProductoBySlug(slug: string) {
     .order("orden", { referencedTable: "producto_variantes", ascending: true })
     .single()
   return data
+}
+
+export async function getMarcasBySeccion(seccionId: string): Promise<string[]> {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("productos")
+    .select("marca")
+    .eq("estado", "publicado")
+    .eq("seccion_id", seccionId)
+    .not("marca", "is", null)
+  const unicas = new Set<string>()
+  for (const row of data || []) {
+    if (row.marca) unicas.add(row.marca)
+  }
+  return Array.from(unicas).sort((a, b) => a.localeCompare(b, "es"))
 }
 
 export async function getProductosRelacionados(productoId: string, seccionId: string | null) {

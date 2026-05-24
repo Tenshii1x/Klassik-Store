@@ -19,6 +19,7 @@ export default async function EditarProductoPage({
     { data: config },
     { data: imagenes },
     { data: variantes },
+    { data: marcasRows },
   ] = await Promise.all([
     supabase.from("productos").select("*").eq("id", id).single(),
     supabase.from("secciones").select("id, nombre, subsecciones(id, nombre)").order("orden"),
@@ -34,9 +35,14 @@ export default async function EditarProductoPage({
       .select("id, tipo, valor, precio_extra, stock_unidades, imagen_url, orden")
       .eq("producto_id", id)
       .order("orden"),
+    supabase.from("productos").select("marca").not("marca", "is", null).order("marca"),
   ])
 
   if (!producto) notFound()
+
+  const marcasSugeridas = Array.from(
+    new Set((marcasRows || []).map((r) => r.marca).filter((m): m is string => Boolean(m)))
+  )
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -54,6 +60,7 @@ export default async function EditarProductoPage({
         initial={producto as never}
         secciones={(secciones as never) || []}
         etiquetas={etiquetas || []}
+        marcasSugeridas={marcasSugeridas}
         margenGlobal={config?.margen_global_porcentaje ?? 60}
       />
     </div>

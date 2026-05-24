@@ -30,10 +30,11 @@ interface Props {
   initial?: Partial<ProductoInput> & { id?: string }
   secciones: Seccion[]
   etiquetas: Etiqueta[]
+  marcasSugeridas?: string[]
   margenGlobal: number
 }
 
-export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Props) {
+export function ProductoForm({ initial, secciones, etiquetas, marcasSugeridas = [], margenGlobal }: Props) {
   const [isPending, startTransition] = useTransition()
   type FormState = Omit<ProductoInput, "costo_temu" | "costo_envio_unitario" | "precio_venta"> & {
     costo_temu: number | null
@@ -47,6 +48,7 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
     descripcion: initial?.descripcion || null,
     slug: initial?.slug || "",
     modelo: initial?.modelo || null,
+    marca: initial?.marca || null,
     seccion_id: initial?.seccion_id || null,
     subseccion_id: initial?.subseccion_id || null,
     modo: initial?.modo || "preorden",
@@ -208,6 +210,26 @@ export function ProductoForm({ initial, secciones, etiquetas, margenGlobal }: Pr
                 ))}
               </select>
             </div>
+          </div>
+          <div>
+            <label className="eyebrow block mb-1.5">Marca</label>
+            <Input
+              list="marcas-sugeridas"
+              value={form.marca ?? ""}
+              onChange={(e) => set("marca", e.target.value || null)}
+              placeholder="Casio, Nixon, Essentials..."
+              maxLength={60}
+            />
+            {marcasSugeridas.length > 0 && (
+              <datalist id="marcas-sugeridas">
+                {marcasSugeridas.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+            )}
+            <p className="text-muted text-xs mt-1">
+              El cliente puede filtrar por marca dentro de cada sección. Escribe una nueva o elige una existente.
+            </p>
           </div>
           <div>
             <label className="eyebrow block mb-1.5">Etiquetas</label>

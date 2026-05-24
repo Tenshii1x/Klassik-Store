@@ -7,6 +7,7 @@ export const productoSchema = z
     descripcion: z.string().max(5000).optional().nullable(),
     slug: z.string().min(1).max(150).regex(/^[a-z0-9-]+$/),
     modelo: z.string().max(50).optional().nullable(),
+    marca: z.string().max(60).optional().nullable(),
     seccion_id: z.string().uuid().optional().nullable(),
     subseccion_id: z.string().uuid().optional().nullable(),
     modo: z.enum(["stock", "preorden"]).default("preorden"),

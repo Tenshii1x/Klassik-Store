@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { getSeccionBySlug, getProductosBySeccion } from "@/lib/catalog/queries"
+import { getSeccionBySlug, getProductosBySeccion, getMarcasBySeccion } from "@/lib/catalog/queries"
 import { SeccionHero } from "@/components/public/SeccionHero"
 import { FiltrosSection } from "@/components/public/FiltrosSection"
 import { ProductoCard } from "@/components/public/ProductoCard"
@@ -9,7 +9,7 @@ export default async function SubseccionPage({
   searchParams,
 }: {
   params: Promise<{ slug: string; subseccion: string }>
-  searchParams: Promise<{ sort?: string; modo?: string }>
+  searchParams: Promise<{ sort?: string; modo?: string; marca?: string }>
 }) {
   const { slug, subseccion } = await params
   const filters = await searchParams
@@ -19,12 +19,19 @@ export default async function SubseccionPage({
   const sub = seccion.subsecciones?.find((s) => s.slug === subseccion)
   if (!sub) notFound()
 
-  const productos = await getProductosBySeccion(seccion.id, { ...filters, subseccion: sub.id })
+  const [productos, marcas] = await Promise.all([
+    getProductosBySeccion(seccion.id, { ...filters, subseccion: sub.id }),
+    getMarcasBySeccion(seccion.id),
+  ])
 
   return (
     <>
       <SeccionHero seccion={{ ...seccion, nombre: `${seccion.nombre} · ${sub.nombre}` }} />
-      <FiltrosSection subsecciones={seccion.subsecciones || []} baseHref={`/seccion/${slug}`} />
+      <FiltrosSection
+        subsecciones={seccion.subsecciones || []}
+        marcas={marcas}
+        baseHref={`/seccion/${slug}`}
+      />
       <section className="max-w-7xl mx-auto px-4 md:px-8 py-10">
         {productos.length === 0 ? (
           <div className="text-center py-20 text-muted">

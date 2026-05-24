@@ -122,6 +122,7 @@ export type Database = {
           descripcion: string | null
           slug: string
           modelo: string | null
+          marca: string | null
           modo: string
           stock_unidades: number | null
           costo_temu: number
@@ -152,6 +153,7 @@ export type Database = {
           descripcion?: string | null
           slug: string
           modelo?: string | null
+          marca?: string | null
           modo?: string
           stock_unidades?: number | null
           costo_temu?: number
@@ -182,6 +184,7 @@ export type Database = {
           descripcion?: string | null
           slug?: string
           modelo?: string | null
+          marca?: string | null
           modo?: string
           stock_unidades?: number | null
           costo_temu?: number

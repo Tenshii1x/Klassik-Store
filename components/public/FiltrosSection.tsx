@@ -6,6 +6,7 @@ import { useTransition } from "react"
 
 interface Props {
   subsecciones: { id: string; nombre: string; slug: string }[]
+  marcas?: string[]
   baseHref: string
 }
 
@@ -22,7 +23,7 @@ const MODOS = [
   { value: "preorden", label: "Pre-orden" },
 ]
 
-export function FiltrosSection({ subsecciones, baseHref }: Props) {
+export function FiltrosSection({ subsecciones, marcas = [], baseHref }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -65,6 +66,18 @@ export function FiltrosSection({ subsecciones, baseHref }: Props) {
       )}
 
       <div className="flex flex-wrap gap-3 items-center justify-end">
+        {marcas.length > 0 && (
+          <select
+            value={params.get("marca") || ""}
+            onChange={(e) => setParam("marca", e.target.value)}
+            className="bg-black border border-border rounded-md px-3 py-2 text-white text-sm"
+          >
+            <option value="">Todas las marcas</option>
+            {marcas.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        )}
         <select
           value={params.get("modo") || ""}
           onChange={(e) => setParam("modo", e.target.value)}
