@@ -49,6 +49,8 @@ export function VariantImagenPicker({
     }
   }, [open])
 
+  const imagenesSoloFoto = imagenes.filter((i) => i.tipo === "imagen")
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -68,8 +70,33 @@ export function VariantImagenPicker({
       </button>
       {open && (
         <div className="absolute left-0 top-14 z-50 w-72 bg-black border border-border-strong rounded-md shadow-deep p-3 space-y-3">
-          <div className="eyebrow">Elegir foto</div>
-          <div className="text-muted text-xs">Popover funcional — contenido en próximos pasos.</div>
+          <div className="eyebrow">Elegir foto del producto</div>
+          {imagenesSoloFoto.length > 0 ? (
+            <div className="grid grid-cols-4 gap-2">
+              {imagenesSoloFoto.map((img) => {
+                const isCurrent = img.url === currentUrl
+                return (
+                  <button
+                    key={img.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(img.url)
+                      setOpen(false)
+                    }}
+                    className={`relative aspect-square rounded overflow-hidden border-2 transition-colors ${
+                      isCurrent ? "border-gold-primary" : "border-border hover:border-gold-primary/60"
+                    }`}
+                  >
+                    <Image src={img.url} alt="" fill className="object-cover" sizes="56px" />
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="text-muted text-xs italic">
+              Sin fotos en la galería del producto. Sube primero las fotos generales o usa &ldquo;Subir foto nueva&rdquo; abajo.
+            </div>
+          )}
         </div>
       )}
     </div>
