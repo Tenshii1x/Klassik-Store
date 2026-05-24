@@ -45,7 +45,11 @@ export default async function EditarProductoPage({
         subtitle="Imágenes, variantes y datos del producto"
       />
       <ProductoImagenesGaleria productoId={id} initial={imagenes || []} />
-      <ProductoVariantes productoId={id} initial={variantes || []} />
+      <ProductoVariantes
+        productoId={id}
+        initial={variantes || []}
+        imagenes={imagenes || []}
+      />
       <ProductoForm
         initial={producto as never}
         secciones={(secciones as never) || []}
