@@ -31,8 +31,10 @@ function formatRange(inicio: string | null | undefined, fin: string | null | und
 
 export function ProductoCard({ p }: { p: ProductoCardData }) {
   const limpias = p.producto_imagenes.filter((i) => i.watermark_limpio)
-  const portada = limpias[0]
-  const portadaEsVideo = portada?.tipo === "video"
+  const primeraFoto = limpias.find((i) => i.tipo !== "video")
+  const tieneVideo = limpias.some((i) => i.tipo === "video")
+  const portadaVisible = primeraFoto ?? limpias[0] ?? null
+  const portadaEsSoloVideo = !primeraFoto && portadaVisible?.tipo === "video"
   const isStock = p.modo === "stock"
   const agotado = isStock && (p.stock_unidades ?? 0) === 0
   const fechaRango = formatRange(p.fecha_llegada_inicio, p.fecha_llegada_fin)
@@ -43,21 +45,19 @@ export function ProductoCard({ p }: { p: ProductoCardData }) {
       className="group block bg-black-surface border border-border rounded-md overflow-hidden hover:border-gold-primary/50 hover:shadow-deep transition-all"
     >
       <div className="aspect-square relative bg-gradient-to-br from-gold-deep/30 to-black overflow-hidden">
-        {portada && (
-          portadaEsVideo ? (
+        {portadaVisible && (
+          portadaEsSoloVideo ? (
             <video
-              src={portada.url}
+              src={portadaVisible.url}
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              autoPlay
               muted
-              loop
               playsInline
               preload="metadata"
               aria-label={p.nombre}
             />
           ) : (
             <Image
-              src={portada.url}
+              src={portadaVisible.url}
               alt={p.nombre}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 300px"
