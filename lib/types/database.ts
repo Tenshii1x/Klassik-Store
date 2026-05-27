@@ -20,6 +20,7 @@ export type Database = {
           nombre: string
           slug: string
           imagen_portada: string | null
+          imagen_banner: string | null
           descripcion_corta: string | null
           orden: number
           tono: string
@@ -32,6 +33,7 @@ export type Database = {
           nombre: string
           slug: string
           imagen_portada?: string | null
+          imagen_banner?: string | null
           descripcion_corta?: string | null
           orden?: number
           tono?: string
@@ -44,6 +46,7 @@ export type Database = {
           nombre?: string
           slug?: string
           imagen_portada?: string | null
+          imagen_banner?: string | null
           descripcion_corta?: string | null
           orden?: number
           tono?: string

@@ -4,6 +4,7 @@ interface Seccion {
   nombre: string
   descripcion_corta: string | null
   imagen_portada: string | null
+  imagen_banner?: string | null
   tono: string
 }
 
@@ -15,11 +16,12 @@ const TONO_BG: Record<string, string> = {
 
 export function SeccionHero({ seccion }: { seccion: Seccion }) {
   const tonoClass = TONO_BG[seccion.tono] || TONO_BG["dark-gold"]
+  const imagen = seccion.imagen_banner || seccion.imagen_portada
   return (
     <section className={`relative bg-gradient-to-br ${tonoClass} overflow-hidden border-b border-border`}>
-      {seccion.imagen_portada && (
+      {imagen && (
         <Image
-          src={seccion.imagen_portada}
+          src={imagen}
           alt={seccion.nombre}
           fill
           sizes="100vw"

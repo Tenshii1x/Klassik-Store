@@ -23,6 +23,7 @@ export function SeccionForm({ initial }: Props) {
     nombre: initial?.nombre || "",
     slug: initial?.slug || "",
     imagen_portada: initial?.imagen_portada || null,
+    imagen_banner: initial?.imagen_banner || null,
     descripcion_corta: initial?.descripcion_corta || null,
     orden: initial?.orden ?? 0,
     tono: (initial?.tono as SeccionInput["tono"]) || "dark-gold",
@@ -112,13 +113,32 @@ export function SeccionForm({ initial }: Props) {
             </div>
           </div>
 
-          <ImageUploader
-            bucket="productos"
-            pathPrefix="secciones"
-            value={form.imagen_portada ?? null}
-            onChange={(url) => set("imagen_portada", url)}
-            label="Imagen de portada"
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <ImageUploader
+                bucket="productos"
+                pathPrefix="secciones"
+                value={form.imagen_portada ?? null}
+                onChange={(url) => set("imagen_portada", url)}
+                label="Imagen de tarjeta (home)"
+              />
+              <p className="text-muted text-xs leading-snug">
+                Se ve en la grilla &ldquo;Explora por categoría&rdquo; del home. Formato vertical (3:4).
+              </p>
+            </div>
+            <div className="space-y-1">
+              <ImageUploader
+                bucket="productos"
+                pathPrefix="secciones"
+                value={form.imagen_banner ?? null}
+                onChange={(url) => set("imagen_banner", url)}
+                label="Banner de la sección"
+              />
+              <p className="text-muted text-xs leading-snug">
+                Se ve como hero al entrar a la página de la sección. Formato horizontal/ancho. Si lo dejas vacío usa la imagen de tarjeta.
+              </p>
+            </div>
+          </div>
 
           <label className="flex items-center gap-2 text-sm text-white">
             <input

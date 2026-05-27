@@ -20,7 +20,7 @@ export async function getSeccionBySlug(slug: string) {
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase
     .from("secciones")
-    .select("id, nombre, slug, imagen_portada, descripcion_corta, tono, subsecciones(id, nombre, slug)")
+    .select("id, nombre, slug, imagen_portada, imagen_banner, descripcion_corta, tono, subsecciones(id, nombre, slug)")
     .eq("activa", true)
     .eq("slug", slug)
     .single()
