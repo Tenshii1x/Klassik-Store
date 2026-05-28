@@ -6,12 +6,13 @@ export default async function ParaElPage() {
   const { data: productos } = await supabase
     .from("productos")
     .select(
-      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, watermark_limpio)"
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, tipo, watermark_limpio)"
     )
     .eq("estado", "publicado")
     .eq("solo_para_el", true)
     .order("destacado", { ascending: false })
     .order("published_at", { ascending: false })
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
 
   return (
     <section className="max-w-7xl mx-auto px-4 md:px-8 py-16">
