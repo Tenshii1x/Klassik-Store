@@ -2,11 +2,12 @@
 
 import Link from "next/link"
 import { Logo } from "@/components/brand/logo"
-import { Search, ShoppingBag, Menu, X } from "lucide-react"
+import { Search, ShoppingBag, Menu, X, Heart } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import { useCart } from "@/components/cart/CartProvider"
+import { useWishlist } from "@/components/wishlist/WishlistProvider"
 
 const NAV = [
   { label: "Inicio", href: "/" },
@@ -21,6 +22,8 @@ export function Header() {
   const pathname = usePathname()
   const { items, setOpen: setCartOpen } = useCart()
   const cartCount = items.reduce((acc, i) => acc + i.cantidad, 0)
+  const { ids: wishlistIds } = useWishlist()
+  const wishlistCount = wishlistIds.length
 
   return (
     <header className="sticky top-0 z-40 bg-black border-b border-border backdrop-blur-md">
@@ -47,6 +50,17 @@ export function Header() {
         <div className="flex items-center gap-2 md:gap-3">
           <Link href="/buscar" className="w-10 h-10 rounded-full border border-border-strong flex items-center justify-center text-gold-primary hover:bg-gold-primary hover:text-black transition-colors">
             <Search size={16} />
+          </Link>
+          <Link
+            href="/favoritos"
+            className="relative w-10 h-10 rounded-full border border-border-strong flex items-center justify-center text-gold-primary hover:bg-gold-primary hover:text-black transition-colors"
+          >
+            <Heart size={16} />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-gold-primary text-black text-[0.6rem] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                {wishlistCount}
+              </span>
+            )}
           </Link>
           <button onClick={() => setCartOpen(true)} className="relative w-10 h-10 rounded-full border border-border-strong flex items-center justify-center text-gold-primary hover:bg-gold-primary hover:text-black transition-colors">
             <ShoppingBag size={16} />
