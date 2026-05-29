@@ -191,3 +191,17 @@ export async function getEtiqueta(slug: string) {
   const { data } = await supabase.from("etiquetas").select("nombre, slug, color").eq("slug", slug).single()
   return data
 }
+
+export async function getProductosByIds(ids: string[]) {
+  if (!ids.length) return []
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from("productos")
+    .select(
+      "id, nombre, slug, precio_venta, precio_anterior, modo, stock_unidades, fecha_llegada_inicio, fecha_llegada_fin, producto_imagenes(url, tipo, watermark_limpio)"
+    )
+    .eq("estado", "publicado")
+    .in("id", ids)
+    .order("orden", { referencedTable: "producto_imagenes", ascending: true })
+  return data || []
+}
