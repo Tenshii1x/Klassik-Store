@@ -49,8 +49,7 @@ export default async function ComoComprarPage() {
             <div className="bg-black-surface border border-border rounded-md p-5">
               <h3 className="text-white font-semibold mb-1">Pago presencial</h3>
               <p className="text-white/70 text-sm leading-relaxed">
-                Si estás en Penonomé o en una estación del metro en Ciudad de Panamá, puedes coordinar y pagar en
-                efectivo al momento de la entrega.
+                Si estás en Penonomé, Iglesia del Carmen o San Miguelito, puedes coordinar y pagar en efectivo al momento de la entrega.
               </p>
             </div>
           </div>

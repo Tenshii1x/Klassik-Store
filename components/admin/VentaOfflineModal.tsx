@@ -45,7 +45,7 @@ export function VentaOfflineModal({ productos }: { productos: Producto[] }) {
       setError(`Stock insuficiente. Disponible: ${stockDisponible} unidades.`)
       return
     }
-    if (!precioVendido || isNaN(Number(precioVendido))) { setError("Ingresa el precio de venta."); return }
+    if (!precioVendido || isNaN(Number(precioVendido)) || Number(precioVendido) <= 0) { setError("Ingresa un precio de venta mayor a $0."); return }
 
     startTransition(async () => {
       try {

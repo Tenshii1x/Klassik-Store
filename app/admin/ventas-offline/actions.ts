@@ -13,6 +13,9 @@ export async function registrarVentaOffline(data: {
 }) {
   const supabase = await createSupabaseServerClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error("No autorizado")
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: insertError } = await (supabase as any).from("ventas_offline").insert({
     producto_id: data.producto_id,

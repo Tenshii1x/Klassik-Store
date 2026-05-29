@@ -11,3 +11,13 @@ CREATE TABLE ventas_offline (
 
 CREATE INDEX idx_ventas_offline_fecha ON ventas_offline(fecha DESC);
 CREATE INDEX idx_ventas_offline_producto ON ventas_offline(producto_id);
+
+-- Enable RLS
+ALTER TABLE ventas_offline ENABLE ROW LEVEL SECURITY;
+
+-- Only authenticated users (admins) can access ventas_offline
+CREATE POLICY "ventas_offline_auth_only" ON ventas_offline
+  FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);

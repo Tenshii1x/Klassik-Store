@@ -155,7 +155,7 @@ export default async function VentasOfflinePage() {
 
       {/* Historial de ventas offline */}
       <section className="space-y-3">
-        <h2 className="eyebrow">Ventas offline recientes</h2>
+        <h2 className="eyebrow">Ventas offline recientes <span className="text-muted text-xs normal-case font-normal">(últimas 50)</span></h2>
         {ventas.length === 0 ? (
           <Card>
             <CardBody className="text-center py-8 text-muted">
