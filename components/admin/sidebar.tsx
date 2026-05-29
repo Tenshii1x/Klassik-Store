@@ -17,6 +17,7 @@ import {
   Megaphone,
   Puzzle,
   Save,
+  ShoppingCart,
 } from "lucide-react"
 
 interface NavItem {
@@ -54,6 +55,7 @@ const groups: NavGroup[] = [
       { label: "Pedidos", href: "/admin/pedidos", icon: ShoppingBag },
       { label: "Próximo pedido", href: "/admin/proximo-pedido", icon: Truck },
       { label: "Reportes", href: "/admin/reportes", icon: TrendingUp },
+      { label: "Ventas Offline", href: "/admin/ventas-offline", icon: ShoppingCart },
     ],
   },
   {
