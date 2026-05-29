@@ -172,6 +172,6 @@ El botón de WhatsApp sigue disponible como canal alternativo para quienes prefi
 | `app/(public)/favoritos/page.tsx` | Crear |
 | `components/public/Header.tsx` | Modificar — agregar ícono corazón con contador |
 | `app/(admin)/admin/ventas/page.tsx` | Crear |
-| `supabase/migrations/YYYYMMDD_ventas.sql` | Crear — tabla ventas |
+| `supabase/migrations/20260529_ventas.sql` | Crear — tabla ventas |
 | `app/(public)/como-comprar/page.tsx` | Modificar — nuevo paso 3 |
 | Panel admin — sección configuración | Llenar campos de políticas legales vía Supabase MCP |
