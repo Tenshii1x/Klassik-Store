@@ -11,6 +11,8 @@ import { PedidoEstadoMachine } from "@/components/admin/PedidoEstadoMachine"
 import { NotasEditor } from "./notas-editor"
 import { DeletePedidoButton } from "./delete-button"
 import { ArrowLeft, ExternalLink, MessageCircle } from "lucide-react"
+import { PagosPanel } from "@/components/admin/PagosPanel"
+import { agregarPagoPedido, eliminarPagoPedido } from "./pagos-actions"
 
 const ESTADO_TONE: Record<
   string,
@@ -64,7 +66,7 @@ export default async function PedidoDetallePage({
 }) {
   const { id } = await params
   const supabase = await createSupabaseServerClient()
-  const [{ data: pedido }, { data: items }] = await Promise.all([
+  const [pedidoRes, itemsRes, pagosRes] = await Promise.all([
     supabase.from("pedidos").select("*").eq("id", id).single(),
     supabase
       .from("pedido_items")
@@ -72,7 +74,23 @@ export default async function PedidoDetallePage({
         "id, producto_id, variante_id, nombre_snapshot, precio_snapshot, cantidad, modo"
       )
       .eq("pedido_id", id),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("pagos_parciales")
+      .select("id, monto, fecha_pago, fecha_vencimiento, nota")
+      .eq("pedido_id", id)
+      .order("fecha_pago", { ascending: true }),
   ])
+
+  const { data: pedido } = pedidoRes
+  const { data: items } = itemsRes
+  const pagosParciales = ((pagosRes.data ?? []) as unknown) as {
+    id: string
+    monto: number
+    fecha_pago: string
+    fecha_vencimiento?: string | null
+    nota?: string | null
+  }[]
 
   if (!pedido) notFound()
 
@@ -231,52 +249,37 @@ export default async function PedidoDetallePage({
                 : "—"}
             </span>
           </div>
-          <div className="flex justify-between gap-4">
-            <span className="text-muted">Monto inicial pagado</span>
-            <span className="text-gold-primary font-serif">
-              {pedido.monto_pagado_inicial != null
-                ? formatUSD(Number(pedido.monto_pagado_inicial))
-                : "—"}
-            </span>
-          </div>
-          {pedido.comprobante_inicial_url && (
-            <div className="space-y-2">
-              <span className="text-muted text-xs uppercase tracking-wider">
-                Comprobante inicial
-              </span>
-              <a
-                href={pedido.comprobante_inicial_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-gold-primary hover:underline text-sm"
-              >
-                <ExternalLink size={14} /> Abrir comprobante en nueva pestaña
-              </a>
+          {(pedido.comprobante_inicial_url || pedido.comprobante_final_url) && (
+            <div className="space-y-2 pb-3 border-b border-border">
+              <span className="text-muted text-xs uppercase tracking-wider">Comprobantes</span>
+              {pedido.comprobante_inicial_url && (
+                <a
+                  href={pedido.comprobante_inicial_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-gold-primary hover:underline text-sm"
+                >
+                  <ExternalLink size={14} /> Comprobante inicial
+                </a>
+              )}
+              {pedido.comprobante_final_url && (
+                <a
+                  href={pedido.comprobante_final_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-gold-primary hover:underline text-sm"
+                >
+                  <ExternalLink size={14} /> Comprobante final
+                </a>
+              )}
             </div>
           )}
-          <div className="flex justify-between gap-4 pt-2 border-t border-border">
-            <span className="text-muted">Monto final pagado</span>
-            <span className="text-gold-primary font-serif">
-              {pedido.monto_pagado_final != null
-                ? formatUSD(Number(pedido.monto_pagado_final))
-                : "—"}
-            </span>
-          </div>
-          {pedido.comprobante_final_url && (
-            <div className="space-y-2">
-              <span className="text-muted text-xs uppercase tracking-wider">
-                Comprobante final
-              </span>
-              <a
-                href={pedido.comprobante_final_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-gold-primary hover:underline text-sm"
-              >
-                <ExternalLink size={14} /> Abrir comprobante en nueva pestaña
-              </a>
-            </div>
-          )}
+          <PagosPanel
+            total={Number(pedido.total)}
+            pagos={pagosParciales}
+            onAgregarPago={(data) => agregarPagoPedido({ ...data, pedido_id: pedido.id })}
+            onEliminarPago={(pagoId) => eliminarPagoPedido(pagoId, pedido.id)}
+          />
         </CardBody>
       </Card>
 
