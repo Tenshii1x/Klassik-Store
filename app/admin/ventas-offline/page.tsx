@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { Topbar } from "@/components/admin/topbar"
 import { Card, CardBody } from "@/components/ui/card"
 import { VentaOfflineModal } from "@/components/admin/VentaOfflineModal"
+import { VentasOfflineHistorial } from "@/components/admin/VentasOfflineHistorial"
 import { formatUSD } from "@/lib/utils"
 import { Package, TrendingUp, DollarSign, BarChart2 } from "lucide-react"
 
@@ -19,7 +20,7 @@ export default async function VentasOfflinePage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from("ventas_offline")
-      .select("id, cantidad, precio_vendido, costo_snapshot, canal, fecha, producto_id, productos(nombre)")
+      .select("id, cantidad, precio_vendido, costo_snapshot, canal, fecha, producto_id, productos(nombre), pagos_parciales(id, monto, fecha_pago, fecha_vencimiento, nota)")
       .order("fecha", { ascending: false })
       .limit(50),
   ])
@@ -34,6 +35,7 @@ export default async function VentasOfflinePage() {
     fecha: string
     producto_id: string | null
     productos: { nombre: string } | null
+    pagos_parciales: { id: string; monto: number; fecha_pago: string; fecha_vencimiento?: string | null; nota?: string | null }[]
   }[]
 
   // Métricas de inventario
@@ -48,13 +50,17 @@ export default async function VentasOfflinePage() {
     return acc + margen * (p.stock_unidades ?? 0)
   }, 0)
 
+  // Ganancia real = proporcional a lo cobrado
   const gananciaRealOffline = ventas.reduce((acc, v) => {
-    return acc + (Number(v.precio_vendido) - Number(v.costo_snapshot)) * v.cantidad
+    const precioUnitario = Number(v.precio_vendido)
+    if (precioUnitario === 0) return acc
+    const cobrado = (v.pagos_parciales ?? []).reduce((s, p) => s + Number(p.monto), 0)
+    const margenPct = (precioUnitario - Number(v.costo_snapshot)) / precioUnitario
+    return acc + cobrado * margenPct
   }, 0)
 
   const totalUnidades = productos.reduce((acc, p) => acc + (p.stock_unidades ?? 0), 0)
 
-  // Tabla de productos con margen
   const productosConMargen = productos
     .map((p) => {
       const costo = Number(p.costo_temu) + Number(p.costo_envio_unitario)
@@ -98,10 +104,10 @@ export default async function VentasOfflinePage() {
           <CardBody className="space-y-2">
             <div className="flex items-center gap-2 text-muted text-xs uppercase tracking-wider">
               <BarChart2 size={14} />
-              Ganancia real offline
+              Ganancia real cobrada
             </div>
             <div className="font-serif text-3xl text-gold-primary">{formatUSD(gananciaRealOffline)}</div>
-            <p className="text-muted text-xs">De ventas por WhatsApp y presencial</p>
+            <p className="text-muted text-xs">Solo de lo efectivamente cobrado</p>
           </CardBody>
         </Card>
         <Card>
@@ -153,50 +159,10 @@ export default async function VentasOfflinePage() {
         </Card>
       </section>
 
-      {/* Historial de ventas offline */}
+      {/* Historial expandible con pagos */}
       <section className="space-y-3">
-        <h2 className="eyebrow">Ventas offline recientes <span className="text-muted text-xs normal-case font-normal">(últimas 50)</span></h2>
-        {ventas.length === 0 ? (
-          <Card>
-            <CardBody className="text-center py-8 text-muted">
-              Aún no hay ventas offline registradas. Usa el botón &quot;Registrar venta&quot; para agregar una.
-            </CardBody>
-          </Card>
-        ) : (
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-muted text-xs uppercase tracking-wider">
-                  <tr className="border-b border-border">
-                    <th className="text-left p-3">Producto</th>
-                    <th className="text-right p-3">Cant.</th>
-                    <th className="text-right p-3">Precio vendido</th>
-                    <th className="text-right p-3">Ganancia</th>
-                    <th className="text-left p-3">Canal</th>
-                    <th className="text-left p-3">Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ventas.map((v) => {
-                    const ganancia = (Number(v.precio_vendido) - Number(v.costo_snapshot)) * v.cantidad
-                    return (
-                      <tr key={v.id} className="border-b border-border last:border-0">
-                        <td className="p-3 text-white">{v.productos?.nombre ?? "Producto eliminado"}</td>
-                        <td className="p-3 text-right text-white">{v.cantidad}</td>
-                        <td className="p-3 text-right text-white">{formatUSD(Number(v.precio_vendido) * v.cantidad)}</td>
-                        <td className="p-3 text-right font-serif text-gold-primary">{formatUSD(ganancia)}</td>
-                        <td className="p-3">
-                          <span className="text-xs text-muted capitalize">{v.canal}</span>
-                        </td>
-                        <td className="p-3 text-muted text-xs">{v.fecha}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
+        <h2 className="eyebrow">Ventas offline <span className="text-muted text-xs normal-case font-normal">(últimas 50 · click para ver pagos)</span></h2>
+        <VentasOfflineHistorial ventas={ventas} />
       </section>
     </div>
   )
