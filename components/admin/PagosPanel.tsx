@@ -50,6 +50,7 @@ export function PagosPanel({ total, pagos, onAgregarPago, onEliminarPago }: Prop
   }
 
   function handleEliminar(id: string) {
+    if (!confirm("¿Eliminar este pago? Esta acción no se puede deshacer.")) return
     startTransition(async () => {
       try {
         await onEliminarPago(id)
