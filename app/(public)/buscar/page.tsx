@@ -1,6 +1,7 @@
-import { buscarProductos, getTodosProductos } from "@/lib/catalog/queries"
+import { buscarProductos, getSeccionesPublicas } from "@/lib/catalog/queries"
 import { SearchBar } from "@/components/public/SearchBar"
 import { ProductoCard } from "@/components/public/ProductoCard"
+import { SeccionesGrid } from "@/components/public/SeccionesGrid"
 
 export default async function BuscarPage({
   searchParams,
@@ -8,27 +9,37 @@ export default async function BuscarPage({
   searchParams: Promise<{ q?: string }>
 }) {
   const { q = "" } = await searchParams
-  const productos = q ? await buscarProductos(q) : await getTodosProductos()
+
+  if (!q) {
+    const secciones = await getSeccionesPublicas()
+    return (
+      <section className="max-w-7xl mx-auto px-4 md:px-8 py-16">
+        <div className="text-center mb-10">
+          <h1 className="font-serif text-4xl text-white mb-4">Catálogo</h1>
+          <div className="max-w-xl mx-auto">
+            <SearchBar />
+          </div>
+        </div>
+        <SeccionesGrid secciones={secciones} />
+      </section>
+    )
+  }
+
+  const productos = await buscarProductos(q)
 
   return (
     <section className="max-w-7xl mx-auto px-4 md:px-8 py-16">
-      <h1 className="font-serif text-4xl text-center text-white mb-2">
-        {q ? "Resultados" : "Catálogo"}
-      </h1>
+      <h1 className="font-serif text-4xl text-center text-white mb-2">Resultados</h1>
       <p className="text-muted text-center mb-10">
-        {q ? `${productos.length} resultado(s) para "${q}"` : `${productos.length} producto(s) disponible(s)`}
+        {productos.length} resultado(s) para &ldquo;{q}&rdquo;
       </p>
       <div className="mb-10">
         <SearchBar />
       </div>
       {productos.length === 0 ? (
         <div className="text-center py-20 text-muted">
-          <p className="font-serif text-2xl text-white">
-            {q ? "Sin resultados" : "Sin productos por ahora"}
-          </p>
-          <p className="mt-2">
-            {q ? "Intenta con otro término de búsqueda." : "Pronto agregaremos novedades."}
-          </p>
+          <p className="font-serif text-2xl text-white">Sin resultados</p>
+          <p className="mt-2">Intenta con otro término de búsqueda.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
