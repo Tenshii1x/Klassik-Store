@@ -48,11 +48,21 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
   const [isPending, startTransition] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const uploadFilesRef = useRef<((files: File[]) => Promise<void>) | null>(null)
   const [items, setItems] = useState<Imagen[]>(initial)
 
   useEffect(() => {
     setItems(initial)
   }, [initial])
+
+  useEffect(() => {
+    uploadFilesRef.current = uploadFiles
+  })
+
+  useEffect(() => {
+    document.addEventListener("paste", handlePasteEvent)
+    return () => document.removeEventListener("paste", handlePasteEvent)
+  }, [])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -94,8 +104,7 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
     })
   }
 
-  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || [])
+  async function uploadFiles(files: File[]) {
     if (!files.length) return
     setUploading(true)
     for (const file of files) {
@@ -113,6 +122,29 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
     setUploading(false)
     if (inputRef.current) inputRef.current.value = ""
     toast.success("Multimedia subida. Marca como limpia cuando confirmes que no tiene watermark.")
+  }
+
+  function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    uploadFiles(Array.from(e.target.files || []))
+  }
+
+  function handlePasteEvent(e: ClipboardEvent) {
+    const active = document.activeElement
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return
+    const files: File[] = []
+    const clipItems = e.clipboardData?.items
+    if (!clipItems) return
+    for (let i = 0; i < clipItems.length; i++) {
+      const item = clipItems[i]
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile()
+        if (!file) continue
+        const extMap: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }
+        const ext = extMap[item.type] ?? "png"
+        files.push(new File([file], `paste-${Date.now()}.${ext}`, { type: item.type }))
+      }
+    }
+    if (files.length > 0) uploadFilesRef.current?.(files)
   }
 
   function handleRemove(img: Imagen) {
@@ -137,6 +169,12 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
 
   return (
     <div className="space-y-3">
+      {items.length === 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-gold-primary/10 border border-gold-primary/30 rounded-md text-gold-primary text-xs">
+          <Upload size={14} />
+          Producto guardado. Ahora agrega las imágenes — arrastra archivos, haz click en &quot;Agregar&quot; o pega con Ctrl+V.
+        </div>
+      )}
       <label className="eyebrow block">Galería · {items.length} archivos</label>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
@@ -166,7 +204,7 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
       </DndContext>
       <input ref={inputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFiles} />
       <p className="text-muted text-xs">
-        Arrastra para reordenar. El primer archivo es la portada — usa el botón <Star size={10} className="inline" /> para hacer portada en un toque. Antes de publicar, marca cada imagen/video como &ldquo;limpia&rdquo; (sin watermark de origen visible).
+        Arrastra para reordenar. El primer archivo es la portada — usa el botón <Star size={10} className="inline" /> para cambiarla. Antes de publicar, marca cada imagen como &ldquo;limpia&rdquo; (sin watermark visible). También puedes pegar imágenes con <kbd className="bg-black border border-border rounded px-1">Ctrl+V</kbd>.
       </p>
     </div>
   )
