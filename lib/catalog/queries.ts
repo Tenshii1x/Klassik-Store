@@ -36,6 +36,8 @@ export async function getProductosBySeccion(
     sort?: string
     precio_min?: number
     precio_max?: number
+    solo_para_ella?: boolean
+    solo_para_el?: boolean
   } = {}
 ) {
   const supabase = await createSupabaseServerClient()
@@ -52,6 +54,8 @@ export async function getProductosBySeccion(
   if (filters.modo) query = query.eq("modo", filters.modo)
   if (filters.precio_min) query = query.gte("precio_venta", filters.precio_min)
   if (filters.precio_max) query = query.lte("precio_venta", filters.precio_max)
+  if (filters.solo_para_ella) query = query.eq("solo_para_ella", true)
+  if (filters.solo_para_el) query = query.eq("solo_para_el", true)
 
   if (filters.sort === "precio_asc") query = query.order("precio_venta", { ascending: true })
   else if (filters.sort === "precio_desc") query = query.order("precio_venta", { ascending: false })
