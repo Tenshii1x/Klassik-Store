@@ -18,6 +18,7 @@ import {
   Puzzle,
   Save,
   ShoppingCart,
+  Layers,
 } from "lucide-react"
 
 interface NavItem {
@@ -47,6 +48,7 @@ const groups: NavGroup[] = [
       { label: "Destacados", href: "/admin/destacados", icon: Star },
       { label: "Etiquetas", href: "/admin/etiquetas", icon: Tags },
       { label: "Combos", href: "/admin/combos", icon: Package },
+      { label: "Inventario", href: "/admin/inventario", icon: Layers },
     ],
   },
   {
