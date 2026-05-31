@@ -13,15 +13,15 @@ export default async function BuscarPage({
   if (!q) {
     const secciones = await getSeccionesPublicas()
     return (
-      <section className="max-w-7xl mx-auto px-4 md:px-8 py-16">
-        <div className="text-center mb-10">
-          <h1 className="font-serif text-4xl text-white mb-4">Catálogo</h1>
+      <>
+        <div className="max-w-7xl mx-auto px-4 md:px-8 pt-16 pb-6 text-center">
+          <h1 className="font-serif text-4xl text-white mb-6">Catálogo</h1>
           <div className="max-w-xl mx-auto">
             <SearchBar />
           </div>
         </div>
         <SeccionesGrid secciones={secciones} />
-      </section>
+      </>
     )
   }
 
