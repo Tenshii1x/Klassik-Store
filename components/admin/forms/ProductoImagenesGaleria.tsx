@@ -107,21 +107,24 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
   async function uploadFiles(files: File[]) {
     if (!files.length) return
     setUploading(true)
-    for (const file of files) {
-      const ext = file.name.split(".").pop() || "jpg"
-      const isVideo = file.type.startsWith("video/")
-      const path = `productos/${productoId}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
-      const { url, error } = await uploadFile("productos", path, file)
-      if (error) {
-        toast.error(`Error con ${file.name}: ${error}`)
-        continue
+    try {
+      for (const file of files) {
+        const ext = file.name.split(".").pop() || "jpg"
+        const isVideo = file.type.startsWith("video/")
+        const path = `productos/${productoId}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`
+        const { url, error } = await uploadFile("productos", path, file)
+        if (error) {
+          toast.error(`Error con ${file.name}: ${error}`)
+          continue
+        }
+        const result = await addProductoImagen(productoId, url!, isVideo ? "video" : "imagen", false)
+        if (result.error) toast.error(result.error)
       }
-      const result = await addProductoImagen(productoId, url!, isVideo ? "video" : "imagen", false)
-      if (result.error) toast.error(result.error)
+      if (inputRef.current) inputRef.current.value = ""
+      toast.success("Multimedia subida. Marca como limpia cuando confirmes que no tiene watermark.")
+    } finally {
+      setUploading(false)
     }
-    setUploading(false)
-    if (inputRef.current) inputRef.current.value = ""
-    toast.success("Multimedia subida. Marca como limpia cuando confirmes que no tiene watermark.")
   }
 
   function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
@@ -144,7 +147,10 @@ export function ProductoImagenesGaleria({ productoId, initial }: Props) {
         files.push(new File([file], `paste-${Date.now()}.${ext}`, { type: item.type }))
       }
     }
-    if (files.length > 0) uploadFilesRef.current?.(files)
+    if (files.length > 0) {
+      e.preventDefault()
+      uploadFilesRef.current?.(files)
+    }
   }
 
   function handleRemove(img: Imagen) {
